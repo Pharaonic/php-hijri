@@ -10,6 +10,7 @@
 </p>
 
 <h3 align="center">Hijri DateTime (Islamic).</h3>
+<h5 align="center">Depends on <a href="https://carbon.nesbot.com/" target="_blank">Carbon</a>.</h5>
 <br>
 
 ## Documentation
