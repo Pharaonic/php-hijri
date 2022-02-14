@@ -18,12 +18,20 @@
         "php": ">=7.2",
         "nesbot/carbon": ">=1.29.0"
     },
+    "require-dev": {
+        "phpunit/phpunit": ">=5.0"
+    },
     "config": {
         "sort-packages": true
     },
     "autoload": {
         "psr-4": {
-            "Pharaonic\\Hijri\\": "src"
+            "Pharaonic\\Hijri\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Pharaonic\\Hijri\\Tests\\": "tests/"
         }
     },
     "minimum-stability": "dev",
