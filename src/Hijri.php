@@ -3,7 +3,12 @@
 namespace Pharaonic\Hijri;
 
 use Carbon\Carbon;
+use Carbon\Exceptions\InvalidFormatException;
+use Carbon\Month;
 use Carbon\Translator;
+use Carbon\WeekDay;
+use DateTimeInterface;
+use DateTimeZone;
 
 class Hijri extends Carbon
 {
@@ -147,9 +152,9 @@ class Hijri extends Carbon
      *
      * @return static
      */
-    public static function parse($time = null, $tz = null)
+    public static function parse(DateTimeInterface|WeekDay|Month|string|int|float|null $time = null, DateTimeZone|string|int|null $timezone = null): static
     {
-        return self::$HIJRI_INSTANCE->prepare(parent::parse($time, $tz));
+        return self::$HIJRI_INSTANCE->prepare(parent::parse($time, $timezone));
     }
 
     /**
@@ -160,7 +165,7 @@ class Hijri extends Carbon
      *
      * @return $this|string
      */
-    public function locale(string $locale = null, ...$fallbackLocales)
+    public function locale(?string $locale = null, string ...$fallbackLocales): static|string
     {
         if ($locale === null) {
             return $this->getTranslatorLocale();
@@ -203,7 +208,7 @@ class Hijri extends Carbon
      *
      * @return string
      */
-    public function getTranslatedDayName($context = null, $keySuffix = '', $defaultValue = null)
+    public function getTranslatedDayName(?string $context = null, string $keySuffix = '', ?string $defaultValue = null): string
     {
         return $this->getTranslatedFormByRegExp('weekdays', $keySuffix, $context, $this->CURRENT_DAY, $defaultValue ?: $this->englishDayOfWeek);
     }
@@ -237,7 +242,7 @@ class Hijri extends Carbon
      *
      * @return string
      */
-    public function getTranslatedMonthName($context = null, $keySuffix = '', $defaultValue = null)
+    public function getTranslatedMonthName(?string $context = null, string $keySuffix = '', ?string $defaultValue = null): string
     {
         return $this->getTranslatedFormByRegExp('months', $keySuffix, $context, $this->month - 1, $defaultValue ?: $this->englishMonth);
     }
@@ -249,7 +254,7 @@ class Hijri extends Carbon
      *
      * @return string
      */
-    public function format($format)
+    public function format(string $format): string
     {
         return str_replace([
             $this->englishDayOfWeek,
