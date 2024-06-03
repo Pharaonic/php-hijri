@@ -3,7 +3,11 @@
 namespace Pharaonic\Hijri;
 
 use Carbon\Carbon;
+use Carbon\Month;
 use Carbon\Translator;
+use Carbon\WeekDay;
+use DateTimeInterface;
+use DateTimeZone;
 
 class Hijri extends Carbon
 {
@@ -62,7 +66,7 @@ class Hijri extends Carbon
     protected $CURRENT_DAY = null;
 
 
-    
+
     /**
      * Getting an instance of Hijri class.
      *
@@ -131,8 +135,6 @@ class Hijri extends Carbon
         return $this;
     }
 
-    
-
     /**
      * Create a carbon instance from a string.
      *
@@ -140,16 +142,11 @@ class Hijri extends Carbon
      * as it allows you to do Carbon::parse('Monday next week')->fn() rather
      * than (new Carbon('Monday next week'))->fn().
      *
-     * @param string|DateTimeInterface|null $time
-     * @param DateTimeZone|string|null      $tz
-     *
      * @throws InvalidFormatException
-     *
-     * @return static
      */
-    public static function parse($time = null, $tz = null)
+    public static function parse(DateTimeInterface|WeekDay|Month|string|int|float|null $time, DateTimeZone|string|int|null $timezone = null): static
     {
-        return self::$HIJRI_INSTANCE->prepare(parent::parse($time, $tz));
+        return self::$HIJRI_INSTANCE->prepare(parent::parse($time, $timezone));
     }
 
     /**
@@ -160,7 +157,7 @@ class Hijri extends Carbon
      *
      * @return $this|string
      */
-    public function locale(string $locale = null, ...$fallbackLocales)
+    public function locale(?string $locale = null, string ...$fallbackLocales): static|string
     {
         if ($locale === null) {
             return $this->getTranslatorLocale();
@@ -200,10 +197,8 @@ class Hijri extends Carbon
      * @param string|null $context      whole format string
      * @param string      $keySuffix    "", "_short" or "_min"
      * @param string|null $defaultValue default value if translation missing
-     *
-     * @return string
      */
-    public function getTranslatedDayName($context = null, $keySuffix = '', $defaultValue = null)
+    public function getTranslatedDayName(?string $context = null, string $keySuffix = '', ?string $defaultValue = null): string
     {
         return $this->getTranslatedFormByRegExp('weekdays', $keySuffix, $context, $this->CURRENT_DAY, $defaultValue ?: $this->englishDayOfWeek);
     }
@@ -234,10 +229,8 @@ class Hijri extends Carbon
      * @param string|null $context      whole format string
      * @param string      $keySuffix    "" or "_short"
      * @param string|null $defaultValue default value if translation missing
-     *
-     * @return string
      */
-    public function getTranslatedMonthName($context = null, $keySuffix = '', $defaultValue = null)
+    public function getTranslatedMonthName(?string $context = null, string $keySuffix = '', ?string $defaultValue = null): string
     {
         return $this->getTranslatedFormByRegExp('months', $keySuffix, $context, $this->month - 1, $defaultValue ?: $this->englishMonth);
     }
@@ -245,11 +238,9 @@ class Hijri extends Carbon
     /**
      * Returns the formatted date string on success or FALSE on failure.
      *
-     * @param string $format
-     *
-     * @return string
+     * @see https://php.net/manual/en/datetime.format.php
      */
-    public function format($format)
+    public function format(string $format): string
     {
         return str_replace([
             $this->englishDayOfWeek,
