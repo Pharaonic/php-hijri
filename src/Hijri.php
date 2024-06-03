@@ -206,7 +206,7 @@ class Hijri extends Carbon
     protected function getTranslatedFormByRegExp($baseKey, $keySuffix, $context, $subKey, $defaultValue)
     {
         $key = $baseKey . $keySuffix;
-        $standaloneKey = "${key}_standalone";
+        $standaloneKey = $key . '_standalone';
         $baseTranslation = $this->getTranslationMessage($key);
 
         if ($baseTranslation instanceof Closure) {
@@ -215,7 +215,7 @@ class Hijri extends Carbon
 
         if (
             $this->getTranslationMessage("$standaloneKey.$subKey") &&
-            (!$context || ($regExp = $this->getTranslationMessage("${baseKey}_regexp")) && !preg_match($regExp, $context))
+            (!$context || ($regExp = $this->getTranslationMessage("$baseKey_regexp")) && !preg_match($regExp, $context))
         ) {
             $key = $standaloneKey;
         }
