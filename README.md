@@ -16,7 +16,7 @@
 
 ## Documentation
 
-You can find the detailed documentation here in [PHP Hijri Documentation](https://pharaonic.io/packages/general-php/hijri).
+You can find the detailed documentation here in [PHP Hijri Documentation](https://pharaonic.io/packages/php/hijri).
 
 ## Contributing
 
