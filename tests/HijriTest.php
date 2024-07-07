@@ -24,11 +24,17 @@ class HijriTest extends TestCase
 
     public function testHijri()
     {
-        $this->assertEquals('Monday, Sha\'aban 8, 1413 7:00 PM', $this->dt->toHijri()->isoFormat('LLLL'));
+        $this->assertEquals(
+            'Monday, Sha\'aban 8, 1413 7:00 PM',
+            $this->dt->toHijri()->isoFormat('LLLL')
+        );
     }
 
     public function testLocalizaedHijri()
     {
-        $this->assertEquals('الاثنين 8 شَعبان 1413 19:00', $this->dt->toHijri()->locale('ar')->isoFormat('LLLL'));
+        $this->assertEquals(
+            'الاثنين 8 شَعبان 1413 19:00',
+            $this->dt->toHijri()->locale('ar')->isoFormat('LLLL')
+        );
     }
 }
