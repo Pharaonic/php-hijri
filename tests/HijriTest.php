@@ -18,6 +18,7 @@ class HijriTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
         Carbon::mixin(HijriCarbon::class);
         $this->dt = Carbon::parse('01-02-1993 19:00:00');
     }
