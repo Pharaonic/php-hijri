@@ -145,7 +145,7 @@ class Hijri extends Carbon
      *
      * @return static
      */
-    public static function parse($time = null, $tz = null)
+    public static function parse($time = null, $tz = null): static
     {
         return self::$HIJRI_INSTANCE->prepare(parent::parse($time, $tz));
     }
@@ -158,7 +158,7 @@ class Hijri extends Carbon
      *
      * @return $this|string
      */
-    public function locale(string $locale = null, ...$fallbackLocales)
+    public function locale(string $locale = null, ...$fallbackLocales): static|string
     {
         if ($locale === null) {
             return $this->getTranslatorLocale();
@@ -201,7 +201,7 @@ class Hijri extends Carbon
      *
      * @return string
      */
-    public function getTranslatedDayName($context = null, $keySuffix = '', $defaultValue = null)
+    public function getTranslatedDayName($context = null, $keySuffix = '', $defaultValue = null): string
     {
         return $this->getTranslatedFormByRegExp('weekdays', $keySuffix, $context, $this->CURRENT_DAY, $defaultValue ?: $this->englishDayOfWeek);
     }
@@ -235,7 +235,7 @@ class Hijri extends Carbon
      *
      * @return string
      */
-    public function getTranslatedMonthName($context = null, $keySuffix = '', $defaultValue = null)
+    public function getTranslatedMonthName($context = null, $keySuffix = '', $defaultValue = null): string
     {
         return $this->getTranslatedFormByRegExp('months', $keySuffix, $context, $this->month - 1, $defaultValue ?: $this->englishMonth);
     }
