@@ -15,7 +15,7 @@
         }
     ],
     "require": {
-        "php": ">=8.0",
+        "php": "^8.0",
         "nesbot/carbon": ">=2.20.0"
     },
     "require-dev": {
