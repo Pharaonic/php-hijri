@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
 - PHPUnit, PHPStan, PHPCS, and GitHub Actions quality checks.
 
 ### Changed
-- PHP support is intentionally scoped to PHP 8.1.x for this release line.
+- PHP support is intentionally scoped to PHP 8.2.x for this release line.
 - Carbon support is intentionally scoped to Carbon 2.x.
 - Internal conversion logic is separated from the Carbon-facing API.
 
