@@ -1,8 +1,8 @@
 * text=auto eol=lf
 /.github export-ignore
 /.gitignore export-ignore
+/.gitattributes export-ignore
 /.editorconfig export-ignore
-/docs export-ignore
 /tests export-ignore
 /phpunit.xml.dist export-ignore
 /phpstan.neon.dist export-ignore
@@ -10,5 +10,3 @@
 /CHANGELOG.md export-ignore
 /CONTRIBUTING.md export-ignore
 /SECURITY.md export-ignore
-
-
