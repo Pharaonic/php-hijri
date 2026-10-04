@@ -1,41 +1,87 @@
 <?php
 
-namespace Pharaonic\Hijri;
+namespace Pharaonic\Hijri\Tests;
 
 use Carbon\Carbon;
+use Pharaonic\Hijri\Calendar\HijriCalendar;
+use Pharaonic\Hijri\Exception\InvalidHijriDateException;
+use Pharaonic\Hijri\Hijri;
 use Pharaonic\Hijri\HijriCarbon;
 use PHPUnit\Framework\TestCase;
 
-class HijriTest extends TestCase
+final class HijriTest extends TestCase
 {
-    /**
-     * Carbon DateTime
-     *
-     * @var Carbon
-     */
-    protected $dt;
+    /** @var Carbon */
+    private $date;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         Carbon::mixin(HijriCarbon::class);
-        $this->dt = Carbon::parse('01-02-1993 19:00:00');
+        Hijri::getInstance()->setHijriAdjustment(-1);
+
+        $this->date = Carbon::parse('01-02-1993 19:00:00');
     }
 
-    public function testHijri()
+    public function testLegacyCarbonMixinApiRemainsCompatible(): void
     {
-        $this->assertEquals(
+        self::assertSame(
             'Monday, Sha\'aban 8, 1413 7:00 PM',
-            $this->dt->toHijri()->isoFormat('LLLL')
+            $this->date->toHijri()->isoFormat('LLLL')
         );
     }
 
-    public function testLocalizaedHijri()
+    public function testArabicLocaleRemainsCompatible(): void
     {
-        $this->assertEquals(
+        self::assertSame(
             'الاثنين 8 شَعبان 1413 19:00',
-            $this->dt->toHijri()->locale('ar')->isoFormat('LLLL')
+            $this->date->toHijri()->locale('ar')->isoFormat('LLLL')
         );
+    }
+
+    public function testDirectParseIsSafeWithoutCallingGetInstanceFirst(): void
+    {
+        $date = Hijri::parse('01-02-1993 19:00:00');
+
+        self::assertSame('1413-08-08', $date->format('Y-m-d'));
+    }
+
+    public function testPerCallAdjustmentDoesNotChangeGlobalAdjustment(): void
+    {
+        self::assertSame(-1, Hijri::getInstance()->getHijriAdjustment());
+
+        $date = $this->date->copy()->toHijri(0);
+
+        self::assertSame(-1, Hijri::getInstance()->getHijriAdjustment());
+        self::assertNotSame('1413-08-08', $date->format('Y-m-d'));
+    }
+
+    public function testCanCreateGregorianCarbonFromHijriComponents(): void
+    {
+        $date = Carbon::fromHijri(1413, 8, 8);
+
+        self::assertSame('1993-02-01', $date->format('Y-m-d'));
+    }
+
+    public function testCanParseHijriDateWithTime(): void
+    {
+        $date = Carbon::parseHijri('1413-08-08 19:30:45');
+
+        self::assertSame('1993-02-01 19:30:45', $date->format('Y-m-d H:i:s'));
+    }
+
+    public function testHijriCalendarValidation(): void
+    {
+        self::assertTrue(HijriCalendar::isValidDate(1445, 9, 1));
+        self::assertFalse(HijriCalendar::isValidDate(1445, 13, 1));
+        self::assertSame(30, HijriCalendar::daysInMonth(1445, 9));
+    }
+
+    public function testInvalidHijriDateThrowsException(): void
+    {
+        $this->expectException(InvalidHijriDateException::class);
+
+        Carbon::fromHijri(1445, 13, 1);
     }
 }
