@@ -1,4 +1,4 @@
-<p align="center"><a href="https://pharaonic.io" target="_blank"><img src="https://raw.githubusercontent.com/Pharaonic/php-hijri/develop/docs/cover.webp"></a></p>
+<p align="center"><a href="https://pharaonic.dev/packages/php/hijri" target="_blank"><img src="https://raw.githubusercontent.com/Pharaonic/php-hijri/develop/docs/cover.webp"></a></p>
 
 <p align="center">
   <a href="https://php.net" target="_blank"><img src="https://img.shields.io/static/v1?label=PHP&message=8.6&color=blue&style=flat-square" alt="PHP Version : 8.6"></a>
