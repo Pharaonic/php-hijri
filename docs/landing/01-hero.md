@@ -27,4 +27,4 @@ labels:
   copied: Copied!
 ---
 
-{package.name} adds the Islamic calendar to Carbon. Call `toHijri()` on any date to get its Hijri day, month, and year, turn a Hijri date back into a Gregorian Carbon instance with `fromHijri()` or `parseHijri()`, and format month names in Arabic or English with the formatting methods you already use.
+Turn any Carbon date into "1 Ramadan 1445" with one `toHijri()` call, and convert it back just as easily.
