@@ -2,6 +2,7 @@
 /.github export-ignore
 /.gitignore export-ignore
 /.gitattributes export-ignore
+/docs export-ignore
 /.editorconfig export-ignore
 /tests export-ignore
 /phpunit.xml.dist export-ignore
