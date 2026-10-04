@@ -1,0 +1,10 @@
+includes:
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - src
+        - tests
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php
