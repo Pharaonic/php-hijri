@@ -18,11 +18,11 @@
         }
     ],
     "require": {
-        "php": ">=8.0 <8.1",
+        "php": ">=8.1 <8.2",
         "nesbot/carbon": "^2.20"
     },
     "require-dev": {
-        "phpstan/phpstan": "^1.12 || ^2.0",
+        "phpstan/phpstan": "^1.12",
         "phpunit/phpunit": "^9.6",
         "squizlabs/php_codesniffer": "^3.13 || ^4.0"
     },
