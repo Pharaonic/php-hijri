@@ -1,7 +1,7 @@
 <p align="center"><a href="https://pharaonic.io" target="_blank"><img src="https://raw.githubusercontent.com/Pharaonic/logos/main/php/hijri.jpg"></a></p>
 
 <p align="center">
-  <a href="https://php.net" target="_blank"><img src="https://img.shields.io/static/v1?label=PHP&message=^8.0&color=blue&style=flat-square" alt="PHP Version : ^8.0"></a>
+  <a href="https://php.net" target="_blank"><img src="https://img.shields.io/static/v1?label=PHP&message=8.0&color=blue&style=flat-square" alt="PHP Version : 8.0"></a>
   <img src="https://img.shields.io/static/v1?label=License&message=MIT&color=brightgreen&style=flat-square" alt="License">
   <img src="https://github.com/Pharaonic/php-hijri/actions/workflows/build.yml/badge.svg" alt="Tests">
   <br>
@@ -16,7 +16,7 @@
 
 ## Documentation
 
-You can find the detailed documentation here in [PHP Hijri Documentation](https://pharaonic.io/packages/php/hijri).
+You can find the detailed documentation here in [PHP Hijri Documentation](https://pharaonic.dev/packages/php/hijri).
 
 ## Contributing
 
