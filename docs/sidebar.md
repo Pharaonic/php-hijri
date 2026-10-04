@@ -1,0 +1,17 @@
+- Getting Started
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Day Adjustment](#adjustment)
+- Usage
+  - [Basic Usage](#basic-usage)
+  - [Gregorian to Hijri](#gregorian-to-hijri)
+  - [Hijri to Gregorian](#hijri-to-gregorian)
+  - [Formatting & Locales](#formatting)
+  - [Hijri Calendar](#hijri-calendar)
+- API Reference
+  - [Methods & Properties](#api-reference)
+- Examples
+  - [Use Cases](#examples)
+  - [Troubleshooting](#troubleshooting)
+- Community
+  - [Contributors](#contributors)
