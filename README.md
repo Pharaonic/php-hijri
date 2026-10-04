@@ -1,7 +1,7 @@
 <p align="center"><a href="https://pharaonic.io" target="_blank"><img src="https://raw.githubusercontent.com/Pharaonic/php-hijri/develop/docs/cover.webp"></a></p>
 
 <p align="center">
-  <a href="https://php.net" target="_blank"><img src="https://img.shields.io/static/v1?label=PHP&message=8.5&color=blue&style=flat-square" alt="PHP Version : 8.5"></a>
+  <a href="https://php.net" target="_blank"><img src="https://img.shields.io/static/v1?label=PHP&message=8.6&color=blue&style=flat-square" alt="PHP Version : 8.6"></a>
   <img src="https://img.shields.io/static/v1?label=License&message=MIT&color=brightgreen&style=flat-square" alt="License">
   <img src="https://github.com/Pharaonic/php-hijri/actions/workflows/build.yml/badge.svg" alt="Tests">
   <br>
