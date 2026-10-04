@@ -134,7 +134,7 @@ class Hijri extends Carbon
      *
      * @return $this|string
      */
-    public function locale(string $locale = null, ...$fallbackLocales): static|string
+    public function locale(?string $locale = null, ...$fallbackLocales): static|string
     {
         if ($locale === null) {
             return $this->getTranslatorLocale();
