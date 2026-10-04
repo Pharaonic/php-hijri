@@ -3,16 +3,20 @@
 namespace Pharaonic\Hijri;
 
 use Carbon\Carbon;
-use Carbon\Translator;
+use Carbon\AbstractTranslator;
 use DateTimeInterface;
 use DateTimeZone;
+use Pharaonic\Hijri\Converter\GregorianToHijriConverter;
+use Pharaonic\Hijri\Support\HijriAdjustment;
 
 class Hijri extends Carbon
 {
+    use HijriCarbon;
+
     /**
-     * Hijri Months List (Arabic)
+     * Hijri Months List (Arabic).
      *
-     * @var array
+     * @var array<int, string>
      */
     protected static $HIJRI_MONTHS = [
         'مُحرَّم',
@@ -26,13 +30,13 @@ class Hijri extends Carbon
         'رَمضان',
         'شوّال',
         'ذو القِعدة',
-        'ذو الحِجّة'
+        'ذو الحِجّة',
     ];
 
     /**
-     * Translated Hijri Months List (Not Arabic)
+     * Translated Hijri Months List (Not Arabic).
      *
-     * @var array
+     * @var array<int, string>
      */
     protected static $TRANS_HIJRI_MONTHS = [
         'Muharram',
@@ -46,115 +50,87 @@ class Hijri extends Carbon
         'Ramadan',
         'Shawwal',
         'Dhu Al-Qi\'dah',
-        'Dhu Al-Hijjah'
+        'Dhu Al-Hijjah',
     ];
 
-    /**
-     * Hijri Instance
-     *
-     * @var Hijri|null
-     */
+    /** @var Hijri|null */
     protected static $HIJRI_INSTANCE;
 
-    /**
-     * CURRENT DAY NUMBER
-     *
-     * @var null|object
-     */
+    /** @var int|null */
     protected $CURRENT_DAY = null;
 
     /**
-     * Getting an instance of Hijri class.
-     *
-     * @return Hijri
+     * Get the shared Hijri entry-point used by the legacy API.
      */
-    public static function getInstance()
+    public static function getInstance(): Hijri
     {
-        return self::$HIJRI_INSTANCE ?? self::$HIJRI_INSTANCE = new self;
-    }
-
-    public function prepare(Hijri $obj)
-    {
-        return $obj->locale($this->getLocale())->adjustment()->convertToHijri();
+        return self::$HIJRI_INSTANCE ?? self::$HIJRI_INSTANCE = new self();
     }
 
     /**
-     * Adjust Hijri Days
+     * Prepare a Hijri instance from a Gregorian Carbon-compatible date.
      *
-     * @return Hijri
+     * @template T of Hijri
+     * @param T $obj
+     * @return T
      */
-    private function adjustment()
+    public function prepare(Hijri $obj, ?int $adjustment = null): Hijri
     {
-        $this->CURRENT_DAY = $this->dayOfWeek;
+        $obj->locale($this->getLocale());
+        $obj->CURRENT_DAY = $obj->dayOfWeek;
 
-        // Adjust the current Carbon days
-        $value = self::getHijriAdjustment();
+        return $obj->convertToHijri($adjustment ?? HijriAdjustment::get());
+    }
 
-        if ($value > 0)
-            $this->addDays($value);
-        else
-            $this->subDays($value * -1);
+    /**
+     * Convert the current Gregorian values to Hijri values.
+     */
+    private function convertToHijri(int $adjustment): static
+    {
+        $components = (new GregorianToHijriConverter())->convert(
+            $this,
+            $adjustment
+        );
+
+        $this->setDate(
+            $components['year'],
+            $components['month'],
+            $components['day']
+        );
 
         return $this;
     }
 
     /**
-     * Convert current Carbon to Hijri
-     *
-     * @return Carbon
-     */
-    private function convertToHijri()
-    {
-        // Convert To Julian
-        $jd = gregoriantojd($this->month, $this->day, $this->year);
-
-        // Convert To Hijri
-        $y = 10631.0 / 30.0;
-        $shift = 8.01 / 60.0;
-
-        $z = $jd - 1948084;
-        $cyc = floor($z / 10631.0);
-        $z = $z - 10631 * $cyc;
-        $j = floor(($z - $shift) / $y);
-        $z = $z - floor($j * $y + $shift);
-
-        $year = 30 * $cyc + $j;
-        $month = (int)floor(($z + 28.5001) / 29.5);
-        if ($month === 13) $month = 12;
-        $day = $z - floor(29.5001 * $month - 29);
-
-        // Set Day & Month & Year
-        $this->day($day);
-        $this->month($month);
-        $this->year($year);
-
-        return $this;
-    }
-
-    /**
-     * Create a carbon instance from a string.
-     *
-     * This is an alias for the constructor that allows better fluent syntax
-     * as it allows you to do Carbon::parse('Monday next week')->fn() rather
-     * than (new Carbon('Monday next week'))->fn().
+     * Convert a Gregorian Carbon-supported input to Hijri using an optional
+     * per-call adjustment without changing the global adjustment.
      *
      * @param string|DateTimeInterface|null $time
-     * @param DateTimeZone|string|null      $tz
+     * @param DateTimeZone|string|null $tz
+     */
+    public static function fromGregorian($time = null, $tz = null, ?int $adjustment = null): static
+    {
+        $instance = self::getInstance();
+
+        /** @var static $parsed */
+        $parsed = parent::parse($time, $tz);
+
+        return $instance->prepare($parsed, $adjustment);
+    }
+
+    /**
+     * Create a Hijri instance from a Carbon-supported input.
      *
-     * @throws InvalidFormatException
-     *
-     * @return static
+     * @param string|DateTimeInterface|null $time
+     * @param DateTimeZone|string|null $tz
      */
     public static function parse($time = null, $tz = null): static
     {
-        return self::$HIJRI_INSTANCE->prepare(parent::parse($time, $tz));
+        return self::fromGregorian($time, $tz);
     }
 
     /**
      * Get/set the locale for the current instance.
-     *
-     * @param string|null $locale
-     * @param string      ...$fallbackLocales
      *
      * @return $this|string
      */
@@ -164,105 +140,45 @@ class Hijri extends Carbon
             return $this->getTranslatorLocale();
         }
 
-        if (!$this->localTranslator || $this->getTranslatorLocale($this->localTranslator) !== $locale) {
-            $translator = Translator::get($locale);
+        parent::locale($locale, ...$fallbackLocales);
 
-            if (!empty($fallbackLocales)) {
-                $translator->setFallbackLocales($fallbackLocales);
+        $translator = $this->getLocalTranslator();
 
-                foreach ($fallbackLocales as $fallbackLocale) {
-                    $messages = Translator::get($fallbackLocale)->getMessages();
-
-                    if (isset($messages[$fallbackLocale])) {
-                        $translator->setMessages($fallbackLocale, $messages[$fallbackLocale]);
-                    }
-                }
-            }
-
-            $is_arabic = substr($translator->getLocale(), 0, 2) == 'ar';
+        if ($translator instanceof AbstractTranslator) {
+            $isArabic = substr($translator->getLocale(), 0, 2) === 'ar';
 
             $translator->setTranslations([
-                'months' => $is_arabic ? self::$HIJRI_MONTHS : self::$TRANS_HIJRI_MONTHS,
-                'months_short' => $is_arabic ? self::$HIJRI_MONTHS : self::$TRANS_HIJRI_MONTHS,
+                'months' => $isArabic ? self::$HIJRI_MONTHS : self::$TRANS_HIJRI_MONTHS,
+                'months_short' => $isArabic ? self::$HIJRI_MONTHS : self::$TRANS_HIJRI_MONTHS,
             ]);
-
-            $this->setLocalTranslator($translator);
         }
 
         return $this;
     }
 
-    /**
-     * Get the translation of the current week day name (with context for languages with multiple forms).
-     *
-     * @param string|null $context      whole format string
-     * @param string      $keySuffix    "", "_short" or "_min"
-     * @param string|null $defaultValue default value if translation missing
-     *
-     * @return string
-     */
     public function getTranslatedDayName($context = null, $keySuffix = '', $defaultValue = null): string
     {
-        return $this->getTranslatedFormByRegExp('weekdays', $keySuffix, $context, $this->CURRENT_DAY, $defaultValue ?: $this->englishDayOfWeek);
+        return $this->getTranslatedFormByRegExp(
+            'weekdays',
+            $keySuffix,
+            $context,
+            $this->CURRENT_DAY,
+            $defaultValue ?: $this->englishDayOfWeek
+        );
     }
 
-    protected function getTranslatedFormByRegExp($baseKey, $keySuffix, $context, $subKey, $defaultValue)
-    {
-        $key = $baseKey . $keySuffix;
-        $standaloneKey = $key . '_standalone';
-        $baseTranslation = $this->getTranslationMessage($key);
-
-        if ($baseTranslation instanceof Closure) {
-            return $baseTranslation($this, $context, $subKey) ?: $defaultValue;
-        }
-
-        if (
-            $this->getTranslationMessage("$standaloneKey.$subKey") &&
-            (!$context || ($regExp = $this->getTranslationMessage("$baseKey_regexp")) && !preg_match($regExp, $context))
-        ) {
-            $key = $standaloneKey;
-        }
-
-        return $this->getTranslationMessage("$key.$subKey", null, $defaultValue);
-    }
-
-    /**
-     * Get the translation of the current month day name (with context for languages with multiple forms).
-     *
-     * @param string|null $context      whole format string
-     * @param string      $keySuffix    "" or "_short"
-     * @param string|null $defaultValue default value if translation missing
-     *
-     * @return string
-     */
-    public function getTranslatedMonthName($context = null, $keySuffix = '', $defaultValue = null): string
-    {
-        return $this->getTranslatedFormByRegExp('months', $keySuffix, $context, $this->month - 1, $defaultValue ?: $this->englishMonth);
-    }
-
-    /**
-     * Returns the formatted date string on success or FALSE on failure.
-     *
-     * @see https://php.net/manual/en/datetime.format.php
-     *
-     * @param string $format
-     *
-     * @return string
-     */
     public function format($format): string
     {
         return str_replace(
             [
                 $this->englishDayOfWeek,
                 $this->englishMonth,
-
                 $this->shortEnglishDayOfWeek,
-                $this->shortEnglishMonth
+                $this->shortEnglishMonth,
             ],
             [
                 $this->dayName,
                 $this->monthName,
-
                 $this->shortDayName,
                 $this->monthName,
             ],
