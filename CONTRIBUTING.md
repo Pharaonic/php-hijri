@@ -23,14 +23,14 @@ git remote add upstream https://github.com/Pharaonic/php-hijri.git
 Use the branch matching the PHP version you want to support:
 
 ```text
-8.2.x → PHP 8.2
+8.3.x → PHP 8.3
 ```
 
 Example:
 
 ```bash
-git checkout 8.2.x
-git pull upstream 8.2.x
+git checkout 8.3.x
+git pull upstream 8.3.x
 ```
 
 ## Create a working branch
@@ -84,7 +84,7 @@ Example:
 ```text
 fix/invalid-date-conversion
         ↓
-      8.2.x
+      8.3.x
 ```
 
 Do not submit the same change to multiple version branches unless requested.
