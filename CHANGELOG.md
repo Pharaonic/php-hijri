@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 8.2.2 - 2026-10-06
+
+### Added
+- Carbon 3 support. `nesbot/carbon` now accepts `^2.62.1 || ^3.0`, and the test suite passes on both Carbon 2 and Carbon 3.
+
 ## 8.2.1 - 2026-10-05
 
 ### Fixed
