@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 8.2.1 - 2026-10-05
+
+### Fixed
+- Hijri month names no longer silently fall back to Gregorian names (e.g. `September` instead of `Ramadan`) on older Carbon releases. The minimum Carbon version is raised from `^2.20` to `^2.62.1`: `Carbon\AbstractTranslator`, which the month-name override relies on, only exists since Carbon 2.55.0, and Carbon releases before 2.62.1 fail on PHP 8.2+.
+
+### Changed
+- CI runs the test suite against both the lowest and the highest allowed dependency versions.
+
 ## Unreleased
 
 ### Added
