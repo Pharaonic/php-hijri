@@ -19,7 +19,7 @@
     ],
     "require": {
         "php": ">=8.1 <8.2",
-        "nesbot/carbon": "^2.20"
+        "nesbot/carbon": "^2.55"
     },
     "require-dev": {
         "phpstan/phpstan": "^1.12",
