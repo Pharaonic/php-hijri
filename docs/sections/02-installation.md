@@ -5,7 +5,7 @@ Install the package with Composer and register the Carbon mixin once at boot.
 ### Requirements
 
 - PHP 8.4.x
-- Carbon 2.x (`nesbot/carbon` ^2.62.1)
+- Carbon 2.x or 3.x (`nesbot/carbon` ^2.62.1 || ^3.0)
 
 No PHP extensions are required. The Julian Day math is implemented in plain PHP, so `ext-calendar` isn't needed.
 

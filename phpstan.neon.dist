@@ -6,5 +6,7 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        - tests/phpstan-bootstrap.php
     bootstrapFiles:
         - tests/phpstan-bootstrap.php
