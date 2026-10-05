@@ -40,6 +40,20 @@ final class HijriTest extends TestCase
         );
     }
 
+    public function testEnglishHijriMonthNames(): void
+    {
+        $date = Hijri::fromGregorian('2024-03-11', null, -1);
+
+        self::assertSame('1 Ramadan 1445', $date->locale('en')->isoFormat('D MMMM YYYY'));
+    }
+
+    public function testArabicHijriMonthNames(): void
+    {
+        $date = Hijri::fromGregorian('2024-03-11', null, -1);
+
+        self::assertSame('1 رَمضان 1445', $date->locale('ar')->isoFormat('D MMMM YYYY'));
+    }
+
     public function testDirectParseIsSafeWithoutCallingGetInstanceFirst(): void
     {
         $date = Hijri::parse('01-02-1993 19:00:00');

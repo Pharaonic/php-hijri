@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: PHP ${{ matrix.php }} - ${{ matrix.os }}
+    name: ${{ matrix.os }} - ${{ matrix.dependencies }} dependencies
 
     strategy:
       fail-fast: false
@@ -21,6 +21,9 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
+        dependencies:
+          - lowest
+          - highest
 
     runs-on: ${{ matrix.os }}
 
@@ -51,7 +54,12 @@ jobs:
         run: composer validate --strict
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+        uses: ramsey/composer-install@v3
+        with:
+          dependency-versions: ${{ matrix.dependencies }}
+          # Composer blocks releases with security advisories by default, which
+          # would silently lift "lowest" above the declared Carbon floor.
+          composer-options: ${{ matrix.dependencies == 'lowest' && '--no-blocking' || '' }}
 
       - name: Run tests
         run: composer test
