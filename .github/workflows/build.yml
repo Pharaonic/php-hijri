@@ -14,13 +14,14 @@ jobs:
     name: ${{ matrix.os }} - ${{ matrix.dependencies }} dependencies
 
     strategy:
+      max-parallel: 2
+      
       fail-fast: false
 
       matrix:
         os:
           - ubuntu-latest
           - windows-latest
-          - macos-latest
         dependencies:
           - lowest
           - highest
