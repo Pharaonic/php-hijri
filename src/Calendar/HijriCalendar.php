@@ -4,9 +4,13 @@ namespace Pharaonic\Hijri\Calendar;
 
 final class HijriCalendar
 {
+    /**
+     * Leap years are 2, 5, 7, 10, 13, 15, 18, 21, 24, 26 and 29 of each
+     * 30-year cycle, the same as GregorianToHijriConverter.
+     */
     public static function isLeapYear(int $year): bool
     {
-        return ((11 * $year + 14) % 30) < 11;
+        return ((11 * $year + 15) % 30) < 11;
     }
 
     public static function daysInMonth(int $year, int $month): int
