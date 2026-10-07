@@ -2,18 +2,32 @@
 
 namespace Pharaonic\Hijri;
 
-use Carbon\Carbon;
 use Carbon\AbstractTranslator;
+use Carbon\Carbon;
+use Carbon\CarbonConverterInterface;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Closure;
+use DateInterval;
 use DateTimeInterface;
 use DateTimeZone;
+use Pharaonic\Hijri\Calendar\HijriCalendar;
+use Pharaonic\Hijri\Concerns\HijriDifference;
 use Pharaonic\Hijri\Converter\GregorianToHijriConverter;
-use Pharaonic\Hijri\Exception\InvalidHijriDateException;
+use Pharaonic\Hijri\Converter\HijriToGregorianConverter;
 use Pharaonic\Hijri\Support\HijriAdjustment;
 
+/**
+ * A Carbon date read in the Hijri calendar.
+ *
+ * The instance holds the real (Gregorian) date and time, so timestamps,
+ * comparisons and differences work with any other date. The year, month and
+ * day are read, set and changed in the Hijri calendar.
+ */
 class Hijri extends Carbon
 {
     use HijriCarbon;
+    use HijriDifference;
 
     /**
      * Hijri Months List (Arabic).
@@ -21,7 +35,7 @@ class Hijri extends Carbon
      * @var array<int, string>
      */
     protected static $HIJRI_MONTHS = [
-        'مُحرَّم',
+        'مُحرَّم',
         'صفَر',
         'ربيع الأول',
         'ربيع الآخر',
@@ -68,40 +82,21 @@ class Hijri extends Carbon
      */
     protected static $HIJRI_TRANSLATORS = [];
 
-    /** @var int|null */
-    protected $CURRENT_DAY = null;
-
-    /** @var int|null */
-    protected $hijriYear = null;
-
-    /** @var int|null */
-    protected $hijriMonth = null;
-
-    /** @var int|null */
-    protected $hijriDay = null;
-
     /**
-     * The underlying date and timezone right after the conversion, used to
-     * detect whether the instance has been changed since.
-     *
-     * @var string|null
-     */
-    protected $hijriConvertedAt = null;
-
-    /**
-     * The Gregorian instant the instance was converted from, as a Unix
-     * timestamp with microseconds ("U.u").
-     *
-     * @var string|null
-     */
-    protected $gregorianInstant = null;
-
-    /**
-     * The adjustment used for the conversion, in days.
+     * The adjustment of the instance in days, or null to follow the global
+     * adjustment.
      *
      * @var int|null
      */
     protected $hijriAdjustment = null;
+
+    /**
+     * The last converted Hijri date, keyed by the Gregorian date and the
+     * adjustment it was converted from.
+     *
+     * @var array{key: string, year: int, month: int, day: int}|null
+     */
+    private $hijriDate = null;
 
     /**
      * Get the shared Hijri entry-point used by the legacy API.
@@ -112,7 +107,8 @@ class Hijri extends Carbon
     }
 
     /**
-     * Prepare a Hijri instance from a Gregorian Carbon-compatible date.
+     * Prepare a Hijri instance with the given adjustment (the global one by
+     * default) and the current locale.
      *
      * @template T of Hijri
      * @param T $obj
@@ -120,138 +116,709 @@ class Hijri extends Carbon
      */
     public function prepare(Hijri $obj, ?int $adjustment = null): Hijri
     {
-        $obj->hijriConvertedAt = null;
+        $obj->hijriAdjustment = $adjustment ?? HijriAdjustment::get();
         $obj->locale(static::getLocale());
-        $obj->CURRENT_DAY = $obj->dayOfWeek;
 
-        return $obj->convertToHijri($adjustment ?? HijriAdjustment::get());
+        return $obj;
     }
 
     /**
-     * Convert the current Gregorian values to Hijri values.
+     * Convert a Gregorian Carbon-supported input to Hijri using an optional
+     * per-call adjustment without changing the global adjustment.
+     *
+     * A DateTimeInterface keeps its exact instant and timezone (unless $tz is
+     * given, in which case the same instant is moved to $tz).
+     *
+     * @param string|DateTimeInterface|null $time
+     * @param DateTimeZone|string|null $tz
      */
-    private function convertToHijri(int $adjustment): static
+    public static function fromGregorian($time = null, $tz = null, ?int $adjustment = null): static
     {
-        $this->gregorianInstant = sprintf('%d.%06d', $this->getTimestamp(), $this->micro);
-        $this->hijriAdjustment = $adjustment;
+        if ($time instanceof DateTimeInterface) {
+            /** @var static $parsed */
+            $parsed = static::createFromFormat('U.u', $time->format('U.u'));
+            $parsed->setTimezone($tz ?? $time->getTimezone());
+        } else {
+            /** @var static $parsed */
+            $parsed = parent::parse($time, $tz);
+        }
 
-        $components = (new GregorianToHijriConverter())->convert(
-            $this,
-            $adjustment
-        );
-
-        $this->hijriYear = $components['year'];
-        $this->hijriMonth = $components['month'];
-        $this->hijriDay = $components['day'];
-
-        // The Hijri values are also stored as a Gregorian date for Carbon. A
-        // day that doesn't exist in that Gregorian month (29 Safar of a common
-        // year) overflows, so the values above stay the source of truth.
-        $this->setDate(
-            $components['year'],
-            $components['month'],
-            $components['day']
-        );
-
-        $this->hijriConvertedAt = $this->getHijriState();
-
-        return $this;
+        return self::getInstance()->prepare($parsed, $adjustment);
     }
 
     /**
-     * Get the Gregorian date of the instance.
+     * Create a Hijri instance from a Carbon-supported input.
      *
-     * While the instance is unchanged since its conversion, this is the exact
-     * date and time it was converted from, in its timezone. Once it's changed,
-     * its current year, month and day are converted as a Hijri date, using
-     * the adjustment of the original conversion, and its time and timezone
-     * are kept. An instance that was never converted (Hijri::now(),
-     * Hijri::create()...) already holds a Gregorian date and is returned as is.
-     *
-     * @throws InvalidHijriDateException if the changed date isn't a valid Hijri date
+     * @param string|DateTimeInterface|null $time
+     * @param DateTimeZone|string|null $tz
+     */
+    public static function parse($time = null, $tz = null): static
+    {
+        return self::fromGregorian($time, $tz);
+    }
+
+    /**
+     * Get the Gregorian date of the instance: the same date, time and
+     * timezone, as a Carbon instance.
      */
     public function toGregorian(): Carbon
     {
-        if ($this->hijriConvertedAt === null) {
-            return $this->toGregorianCarbon(sprintf('%d.%06d', $this->getTimestamp(), $this->micro));
-        }
-
-        if ($this->isUnchangedHijri()) {
-            return $this->toGregorianCarbon((string) $this->gregorianInstant);
-        }
-
-        return static::fromHijri(
-            (int) $this->year,
-            (int) $this->month,
-            (int) $this->day,
-            $this->getTimezone(),
-            $this->hijriAdjustment
-        )->setTime($this->hour, $this->minute, $this->second, $this->micro);
-    }
-
-    /**
-     * Build a Carbon instance from a "U.u" instant, in the timezone of the
-     * instance.
-     */
-    private function toGregorianCarbon(string $instant): Carbon
-    {
         /** @var Carbon $gregorian */
-        $gregorian = Carbon::createFromFormat('U.u', $instant);
+        $gregorian = Carbon::createFromFormat(
+            'U.u',
+            sprintf('%d.%06d', $this->getTimestamp(), $this->micro)
+        );
 
         return $gregorian->setTimezone($this->getTimezone());
     }
 
     /**
-     * Get the underlying date and timezone, as stored by Carbon.
+     * Get the Gregorian date of the instance as a CarbonImmutable.
      */
-    private function getHijriState(): string
+    public function toImmutable(): CarbonImmutable
     {
-        return $this->rawFormat('Y-m-d H:i:s.u e');
+        return CarbonImmutable::instance($this->toGregorian());
     }
 
     /**
-     * Determine if the instance still holds the date it was converted to.
+     * Get the Hijri year, month and day of the instance, in its timezone.
      *
-     * Once it's changed (addDays(), setDate(), setTimezone()...) the Hijri
-     * values no longer apply and Carbon's own values are used.
+     * @return array{year: int, month: int, day: int}
      */
-    protected function isUnchangedHijri(): bool
+    protected function getHijriDate(): array
     {
-        return $this->hijriConvertedAt !== null
-            && $this->hijriConvertedAt === $this->getHijriState();
+        $adjustment = $this->getConversionAdjustment();
+        $key = $this->rawFormat('Y-m-d') . '|' . $adjustment;
+
+        if ($this->hijriDate === null || $this->hijriDate['key'] !== $key) {
+            $this->hijriDate = ['key' => $key] + (new GregorianToHijriConverter())->convert($this, $adjustment);
+        }
+
+        return [
+            'year' => $this->hijriDate['year'],
+            'month' => $this->hijriDate['month'],
+            'day' => $this->hijriDate['day'],
+        ];
+    }
+
+    /**
+     * Get the adjustment the instance is converted with.
+     */
+    protected function getConversionAdjustment(): int
+    {
+        return $this->hijriAdjustment ?? HijriAdjustment::get();
     }
 
     /**
      * Get a part of the instance.
      *
-     * The year, month, day and weekday are the Hijri ones while the instance
-     * is unchanged since its conversion.
+     * The year, month, day and the values built from them (dayOfYear,
+     * daysInMonth, quarter...) are Hijri ones.
      *
      * @param mixed $name
      */
     public function get($name): mixed
     {
-        if (is_string($name) && $this->isUnchangedHijri()) {
-            switch ($name) {
-                case 'year':
-                    return $this->hijriYear;
-                case 'month':
-                    return $this->hijriMonth;
-                case 'day':
-                    return $this->hijriDay;
-                case 'dayOfWeek':
-                    return $this->CURRENT_DAY;
-                case 'dayOfWeekIso':
-                    return $this->CURRENT_DAY === 0 ? 7 : $this->CURRENT_DAY;
-            }
+        $name = self::enumValue($name);
+
+        switch ($name) {
+            case 'year':
+            case 'month':
+            case 'day':
+                return $this->getHijriDate()[$name];
+            case 'daysInMonth':
+                $date = $this->getHijriDate();
+
+                return HijriCalendar::daysInMonth($date['year'], $date['month']);
+            case 'dayOfYear':
+                return (int) $this->getHijriFormatValue('z') + 1;
+            case 'daysInYear':
+                return $this->isLeapYear() ? 355 : 354;
+            case 'englishMonth':
+            case 'shortEnglishMonth':
+                return self::$TRANS_HIJRI_MONTHS[$this->getHijriDate()['month'] - 1];
         }
 
         return parent::get($name);
     }
 
     /**
+     * Set a part of the instance. The year, month and day are Hijri ones.
+     *
+     * @param mixed $name
+     * @param mixed $value
+     */
+    public function set($name, $value = null): static
+    {
+        if (is_array($name)) {
+            foreach ($name as $key => $part) {
+                $this->set($key, $part);
+            }
+
+            return $this;
+        }
+
+        $unit = self::enumValue($name);
+
+        if (in_array($unit, ['year', 'month', 'day'], true)) {
+            $date = $this->getHijriDate();
+            $date[$unit] = (int) self::enumValue($value);
+            $this->setDate($date['year'], $date['month'], $date['day']);
+
+            return $this;
+        }
+
+        return parent::set($name, $value);
+    }
+
+    /**
+     * Set the Hijri date, keeping the time.
+     *
+     * Like DateTime::setDate(), a month or day out of range moves the date
+     * forward or backward: setDate(1445, 2, 30) is the 1st of Rabi' Al-Awwal
+     * 1445, as Safar 1445 has 29 days.
+     *
+     * @param int $year
+     * @param int $month
+     * @param int $day
+     */
+    public function setDate($year, $month, $day): static
+    {
+        $months = ((int) $year * 12) + (int) $month - 1;
+        $year = (int) floor($months / 12);
+        $month = $months - ($year * 12) + 1;
+
+        $first = (new HijriToGregorianConverter())->convert(
+            $year,
+            $month,
+            1,
+            $this->getConversionAdjustment()
+        );
+
+        parent::setDate($first['year'], $first['month'], $first['day'] + (int) $day - 1);
+
+        return $this;
+    }
+
+    /**
+     * Add an amount of a unit. Months, quarters, years, decades, centuries
+     * and millennia are Hijri ones; other units are passed to Carbon.
+     *
+     * @param mixed $unit
+     * @param int|float $value
+     * @param mixed $overflow
+     * @param int|null $anchorDay
+     */
+    public function addUnit($unit, $value = 1, $overflow = null, $anchorDay = null): static
+    {
+        $units = [
+            'month' => [1, 'month'],
+            'quarter' => [static::MONTHS_PER_QUARTER, 'month'],
+            'year' => [1, 'year'],
+            'decade' => [static::YEARS_PER_DECADE, 'year'],
+            'century' => [static::YEARS_PER_CENTURY, 'year'],
+            'millennium' => [static::YEARS_PER_MILLENNIUM, 'year'],
+        ];
+        $name = static::singularUnit((string) self::enumValue($unit));
+
+        if (! isset($units[$name]) || ! is_numeric($value)) {
+            return parent::addUnit(...func_get_args());
+        }
+
+        [$factor, $baseUnit] = $units[$name];
+
+        // Like Carbon, only whole months or years are added.
+        $months = (int) ($value * $factor) * ($baseUnit === 'year' ? 12 : 1);
+        $mode = is_object($overflow) ? $overflow->name : $overflow;
+
+        if ($anchorDay !== null || $mode === 'AnchorDay') {
+            $this->addHijriMonths($months, false, $anchorDay ?? $this->getHijriDate()['day']);
+        } else {
+            $this->addHijriMonths($months, $this->shouldOverflowHijri($baseUnit, $mode), null);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a DateInterval. Its years and months are Hijri ones.
+     */
+    public function rawAdd(DateInterval $interval): static
+    {
+        return $this->addHijriInterval($interval, 1);
+    }
+
+    /**
+     * Subtract a DateInterval. Its years and months are Hijri ones.
+     */
+    public function rawSub(DateInterval $interval): static
+    {
+        return $this->addHijriInterval($interval, -1);
+    }
+
+    /**
+     * Add an interval, or an amount of a unit.
+     *
+     * @param mixed $unit
+     * @param mixed $value
+     * @param mixed $overflow
+     * @param int|null $anchorDay
+     */
+    public function add($unit, $value = 1, $overflow = null, $anchorDay = null): static
+    {
+        if ($unit instanceof DateInterval && ! $unit instanceof CarbonConverterInterface) {
+            return $this->rawAdd($unit);
+        }
+
+        return parent::add(...func_get_args());
+    }
+
+    /**
+     * Subtract an interval, or an amount of a unit.
+     *
+     * @param mixed $unit
+     * @param mixed $value
+     * @param mixed $overflow
+     * @param int|null $anchorDay
+     */
+    public function sub($unit, $value = 1, $overflow = null, $anchorDay = null): static
+    {
+        if ($unit instanceof DateInterval && ! $unit instanceof CarbonConverterInterface) {
+            return $this->rawSub($unit);
+        }
+
+        return parent::sub(...func_get_args());
+    }
+
+    /**
+     * Add Hijri months, keeping the day when it exists in the target month.
+     */
+    private function addHijriMonths(int $months, bool $overflow, ?int $anchorDay): void
+    {
+        $date = $this->getHijriDate();
+        $months += ($date['year'] * 12) + $date['month'] - 1;
+        $year = (int) floor($months / 12);
+        $month = $months - ($year * 12) + 1;
+        $day = $anchorDay ?? $date['day'];
+
+        if (! $overflow || $anchorDay !== null) {
+            $day = min($day, HijriCalendar::daysInMonth($year, $month));
+        }
+
+        $this->setDate($year, $month, $day);
+    }
+
+    /**
+     * Add the years and months of an interval as Hijri ones, then the rest.
+     */
+    private function addHijriInterval(DateInterval $interval, int $sign): static
+    {
+        if ($interval->invert) {
+            $sign = -$sign;
+        }
+
+        $months = (($interval->y * 12) + $interval->m) * $sign;
+
+        if ($months !== 0) {
+            $this->addHijriMonths($months, true, null);
+        }
+
+        $rest = new DateInterval('PT0S');
+        $rest->d = $interval->d;
+        $rest->h = $interval->h;
+        $rest->i = $interval->i;
+        $rest->s = $interval->s;
+        $rest->f = $interval->f;
+        $rest->invert = $sign < 0 ? 1 : 0;
+
+        parent::rawAdd($rest);
+
+        return $this;
+    }
+
+    /**
+     * Determine if adding months or years can overflow into the next month.
+     *
+     * @param bool|string|null $mode
+     */
+    private function shouldOverflowHijri(string $unit, $mode): bool
+    {
+        if ($mode !== null) {
+            return $mode === true || $mode === 'Overflow';
+        }
+
+        $ucUnit = ucfirst($unit) . 's';
+
+        return $this->{'local' . $ucUnit . 'Overflow'} ?? static::{'shouldOverflow' . $ucUnit}();
+    }
+
+    /**
+     * Get the value of a backed enum (Carbon 3's Unit, Month...), or the
+     * value itself.
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    private static function enumValue($value)
+    {
+        return is_object($value) && property_exists($value, 'value') ? $value->value : $value;
+    }
+
+    /**
+     * Go to the end of the Hijri year.
+     */
+    public function endOfYear(): static
+    {
+        return $this->setDate($this->year, 12, 1)->endOfMonth();
+    }
+
+    /**
+     * Go to the end of the Hijri decade.
+     */
+    public function endOfDecade(): static
+    {
+        $year = $this->year - $this->year % static::YEARS_PER_DECADE + static::YEARS_PER_DECADE - 1;
+
+        return $this->setDate($year, 12, 1)->endOfMonth();
+    }
+
+    /**
+     * Go to the end of the Hijri century.
+     */
+    public function endOfCentury(): static
+    {
+        $year = $this->year - 1 - ($this->year - 1) % static::YEARS_PER_CENTURY + static::YEARS_PER_CENTURY;
+
+        return $this->setDate($year, 12, 1)->endOfMonth();
+    }
+
+    /**
+     * Go to the end of the Hijri millennium.
+     */
+    public function endOfMillennium(): static
+    {
+        $year = $this->year - 1 - ($this->year - 1) % static::YEARS_PER_MILLENNIUM + static::YEARS_PER_MILLENNIUM;
+
+        return $this->setDate($year, 12, 1)->endOfMonth();
+    }
+
+    /**
+     * Go to the first day of the Hijri month, or to its first given weekday.
+     *
+     * @param int|null $dayOfWeek
+     */
+    public function firstOfMonth($dayOfWeek = null): static
+    {
+        $this->startOfDay()->day(1);
+
+        if ($dayOfWeek !== null && $this->dayOfWeek !== (int) $dayOfWeek) {
+            $this->next((int) $dayOfWeek);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Go to the last day of the Hijri month, or to its last given weekday.
+     *
+     * @param int|null $dayOfWeek
+     */
+    public function lastOfMonth($dayOfWeek = null): static
+    {
+        $this->startOfDay()->day($this->daysInMonth);
+
+        if ($dayOfWeek !== null && $this->dayOfWeek !== (int) $dayOfWeek) {
+            $this->previous((int) $dayOfWeek);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Go to the given occurrence of a weekday in the Hijri month, or return
+     * false if the month doesn't have it.
+     *
+     * @param int $nth
+     * @param int $dayOfWeek
+     * @return static|false
+     */
+    public function nthOfMonth($nth, $dayOfWeek)
+    {
+        $date = $this->avoidMutation()->firstOfMonth()->modify('+' . $nth . ' ' . static::$days[$dayOfWeek]);
+
+        return $date->year === $this->year && $date->month === $this->month
+            ? $this->modify($date->rawFormat('Y-m-d H:i:s.u'))
+            : false;
+    }
+
+    /**
+     * Go to the given occurrence of a weekday in the Hijri quarter, or return
+     * false if the quarter doesn't have it.
+     *
+     * @param int $nth
+     * @param int $dayOfWeek
+     * @return static|false
+     */
+    public function nthOfQuarter($nth, $dayOfWeek)
+    {
+        $date = $this->avoidMutation()->firstOfQuarter()->modify('+' . $nth . ' ' . static::$days[$dayOfWeek]);
+
+        return $date->year === $this->year && $date->quarter === $this->quarter
+            ? $this->modify($date->rawFormat('Y-m-d H:i:s.u'))
+            : false;
+    }
+
+    /**
+     * Go to the given occurrence of a weekday in the Hijri year, or return
+     * false if the year doesn't have it.
+     *
+     * @param int $nth
+     * @param int $dayOfWeek
+     * @return static|false
+     */
+    public function nthOfYear($nth, $dayOfWeek)
+    {
+        $date = $this->avoidMutation()->firstOfYear()->modify('+' . $nth . ' ' . static::$days[$dayOfWeek]);
+
+        return $date->year === $this->year
+            ? $this->modify($date->rawFormat('Y-m-d H:i:s.u'))
+            : false;
+    }
+
+    /**
+     * Determine if the instance is today.
+     */
+    public function isToday(): bool
+    {
+        return $this->rawFormat('Y-m-d') === $this->nowWithSameTz()->rawFormat('Y-m-d');
+    }
+
+    /**
+     * Determine if the instance is yesterday.
+     */
+    public function isYesterday(): bool
+    {
+        return $this->rawFormat('Y-m-d') === static::yesterday($this->getTimezone())->rawFormat('Y-m-d');
+    }
+
+    /**
+     * Determine if the instance is tomorrow.
+     */
+    public function isTomorrow(): bool
+    {
+        return $this->rawFormat('Y-m-d') === static::tomorrow($this->getTimezone())->rawFormat('Y-m-d');
+    }
+
+    /**
+     * Determine if the given date (today by default) has the same Hijri month
+     * and day as the instance.
+     *
+     * @param DateTimeInterface|string|null $date
+     */
+    public function isBirthday($date = null): bool
+    {
+        $other = $this->resolveCarbon($date);
+
+        return $other->month === $this->month && $other->day === $this->day;
+    }
+
+    /**
+     * Keep the date and time, and change the timezone (and so the instant).
+     *
+     * @param DateTimeZone|string $value
+     */
+    public function shiftTimezone($value): static
+    {
+        $dateTime = $this->rawFormat('Y-m-d H:i:s.u');
+
+        return $this->setTimezone($value)->modify($dateTime);
+    }
+
+    /**
+     * Determine if the Hijri year has 355 days.
+     */
+    public function isLeapYear(): bool
+    {
+        return HijriCalendar::isLeapYear($this->year);
+    }
+
+    /**
+     * Determine if the given date is in the same Hijri unit (year, month,
+     * quarter...) as the instance.
+     *
+     * @param string $unit
+     * @param DateTimeInterface|string|null $date
+     */
+    public function isSameUnit($unit, $date = null): bool
+    {
+        if ($unit === 'year' || $unit === 'month') {
+            $other = $this->resolveCarbon($date);
+
+            return $other->year === $this->year && ($unit === 'year' || $other->month === $this->month);
+        }
+
+        return parent::isSameUnit($unit, $date ?? 'now');
+    }
+
+    /**
+     * Determine if the given date is in the same Hijri month as the instance.
+     *
+     * @param DateTimeInterface|string|null $date
+     * @param bool $ofSameYear
+     */
+    public function isSameMonth($date = null, $ofSameYear = true): bool
+    {
+        $other = $this->resolveCarbon($date);
+
+        return $other->month === $this->month && (! $ofSameYear || $other->year === $this->year);
+    }
+
+    /**
+     * Get a Hijri instance with the same adjustment from a date or a string.
+     *
+     * @param DateTimeInterface|string|null $date
+     */
+    protected function resolveCarbon($date = null): self
+    {
+        $resolved = parent::resolveCarbon($date);
+        $adjustment = $this->getConversionAdjustment();
+
+        if ($resolved instanceof self && $resolved->getConversionAdjustment() === $adjustment) {
+            return $resolved;
+        }
+
+        return static::fromGregorian($resolved, null, $adjustment);
+    }
+
+    /**
+     * Format the instance as a string (Hijri date).
+     */
+    public function __toString(): string
+    {
+        /** @var mixed $format */
+        $format = $this->localToStringFormat ?? null;
+
+        if ($format instanceof Closure) {
+            return $format($this);
+        }
+
+        if (! is_string($format) || $format === '') {
+            $format = CarbonInterface::DEFAULT_TO_STRING_FORMAT;
+        }
+
+        return $this->format($format);
+    }
+
+    /**
+     * Format the instance as a Hijri date string (Y-m-d).
+     */
+    public function toDateString(): string
+    {
+        return $this->format('Y-m-d');
+    }
+
+    /**
+     * Format the instance as a Hijri date and time string.
+     *
+     * @param string $unitPrecision
+     */
+    public function toDateTimeString($unitPrecision = 'second'): string
+    {
+        return $this->format('Y-m-d ' . static::getTimeFormatByPrecision($unitPrecision));
+    }
+
+    /**
+     * Format the instance as a readable Hijri date (M j, Y).
+     */
+    public function toFormattedDateString(): string
+    {
+        return $this->format('M j, Y');
+    }
+
+    /**
+     * Format the instance as a readable Hijri date with the weekday.
+     */
+    public function toFormattedDayDateString(): string
+    {
+        return $this->format('D, M j, Y');
+    }
+
+    /**
+     * Format the instance as a readable Hijri date and time with the weekday.
+     */
+    public function toDayDateTimeString(): string
+    {
+        return $this->format('D, M j, Y g:i A');
+    }
+
+    /**
+     * Get the instance as an array of Hijri values.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        $array['formatted'] = $this->format(CarbonInterface::DEFAULT_TO_STRING_FORMAT);
+
+        return $array;
+    }
+
+    /**
+     * Get the Gregorian ISO-8601 string of the instance, as used for JSON.
+     *
+     * @param bool $keepOffset
+     */
+    public function toISOString($keepOffset = false): ?string
+    {
+        return $this->toGregorian()->toISOString($keepOffset);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __serialize(): array
+    {
+        // Older Carbon 2 releases serialize with __sleep() only.
+        $data = method_exists(Carbon::class, '__serialize') ? parent::__serialize() : [
+            'timezone' => $this->getTimezone()->getName(),
+        ];
+        $data['date'] = $this->rawFormat('Y-m-d H:i:s.u');
+
+        if (! isset($data['dumpLocale']) && $this->hasLocalTranslator()) {
+            $data['dumpLocale'] = $this->locale();
+        }
+
+        if (isset($data['dumpDateProperties']['date'])) {
+            $data['dumpDateProperties']['date'] = $data['date'];
+        }
+
+        $data['hijriAdjustment'] = $this->hijriAdjustment;
+
+        return $data;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function __unserialize(array $data): void
+    {
+        if (method_exists(Carbon::class, '__unserialize')) {
+            parent::__unserialize($data);
+        } else {
+            $this->__construct($data['date'], $data['timezone']);
+
+            if (isset($data['dumpLocale'])) {
+                $this->locale($data['dumpLocale']);
+            }
+        }
+
+        $this->hijriAdjustment = $data['hijriAdjustment'] ?? null;
+    }
+
+    /**
      * Get the units used by isoFormat(), reading the day, month and year
-     * through the Hijri values instead of the stored Gregorian date.
+     * through the Hijri values.
      *
      * @return array<string, mixed>
      */
@@ -266,34 +833,6 @@ class Hijri extends Carbon
         };
 
         return $units;
-    }
-
-    /**
-     * Convert a Gregorian Carbon-supported input to Hijri using an optional
-     * per-call adjustment without changing the global adjustment.
-     *
-     * @param string|DateTimeInterface|null $time
-     * @param DateTimeZone|string|null $tz
-     */
-    public static function fromGregorian($time = null, $tz = null, ?int $adjustment = null): static
-    {
-        $instance = self::getInstance();
-
-        /** @var static $parsed */
-        $parsed = parent::parse($time, $tz);
-
-        return $instance->prepare($parsed, $adjustment);
-    }
-
-    /**
-     * Create a Hijri instance from a Carbon-supported input.
-     *
-     * @param string|DateTimeInterface|null $time
-     * @param DateTimeZone|string|null $tz
-     */
-    public static function parse($time = null, $tz = null): static
-    {
-        return self::fromGregorian($time, $tz);
     }
 
     /**
@@ -316,6 +855,29 @@ class Hijri extends Carbon
         }
 
         return $this;
+    }
+
+    /**
+     * Get a translation message, with the Hijri month names.
+     *
+     * @param mixed $translator
+     * @return mixed
+     */
+    public function getTranslationMessage(
+        string $key,
+        ?string $locale = null,
+        ?string $default = null,
+        $translator = null
+    ) {
+        if ($translator === null) {
+            $translator = $this->getLocalTranslator();
+
+            if ($translator instanceof AbstractTranslator) {
+                $translator = self::getHijriTranslator($translator);
+            }
+        }
+
+        return parent::getTranslationMessage($key, $locale, $default, $translator);
     }
 
     /**
@@ -351,48 +913,19 @@ class Hijri extends Carbon
         return self::$HIJRI_TRANSLATORS[$key];
     }
 
-    public function getTranslatedDayName($context = null, $keySuffix = '', $defaultValue = null): string
-    {
-        return $this->getTranslatedFormByRegExp(
-            'weekdays',
-            $keySuffix,
-            $context,
-            $this->CURRENT_DAY,
-            $defaultValue ?: $this->englishDayOfWeek
-        );
-    }
-
     /**
      * Format the instance with Hijri values.
      *
-     * While the instance is unchanged since its conversion, the date
-     * characters read the Hijri values: d, j, m, n, Y, y, t (days in the Hijri
-     * month), z (day of the Hijri year, from 0), L (Hijri leap year), S
-     * (English suffix of the Hijri day), w and N (original weekday), and c and
-     * r (built from the Hijri date). l, D, F and M print the localized weekday
-     * and Hijri month names. Other characters are formatted by Carbon.
+     * The date characters read the Hijri date: d, j, m, n, Y, y, t (days in
+     * the Hijri month), z (day of the Hijri year, from 0), L (Hijri leap
+     * year), S (English suffix of the Hijri day), and c and r (built from the
+     * Hijri date). l, D, F and M print the localized weekday and Hijri month
+     * names. Other characters (time, timezone, U, w, N, o, W...) are
+     * formatted by Carbon. rawFormat() formats the Gregorian date.
      */
     public function format($format): string
     {
-        if ($this->isUnchangedHijri()) {
-            return parent::format($this->toHijriFormat((string) $format));
-        }
-
-        return str_replace(
-            [
-                $this->englishDayOfWeek,
-                $this->englishMonth,
-                $this->shortEnglishDayOfWeek,
-                $this->shortEnglishMonth,
-            ],
-            [
-                $this->dayName,
-                $this->monthName,
-                $this->shortDayName,
-                $this->monthName,
-            ],
-            parent::format($format)
-        );
+        return parent::format($this->toHijriFormat((string) $format));
     }
 
     /**
@@ -438,10 +971,7 @@ class Hijri extends Carbon
      */
     private function getHijriFormatValue(string $char): ?string
     {
-        $year = (int) $this->hijriYear;
-        $month = (int) $this->hijriMonth;
-        $day = (int) $this->hijriDay;
-        $converter = new GregorianToHijriConverter();
+        ['year' => $year, 'month' => $month, 'day' => $day] = $this->getHijriDate();
 
         switch ($char) {
             case 'd':
@@ -454,14 +984,10 @@ class Hijri extends Carbon
                 $dayOfYear = $day - 1;
 
                 for ($previous = 1; $previous < $month; $previous++) {
-                    $dayOfYear += $converter->daysInMonth($year, $previous);
+                    $dayOfYear += HijriCalendar::daysInMonth($year, $previous);
                 }
 
                 return (string) $dayOfYear;
-            case 'w':
-                return (string) $this->CURRENT_DAY;
-            case 'N':
-                return (string) ($this->CURRENT_DAY === 0 ? 7 : $this->CURRENT_DAY);
             case 'l':
                 return $this->dayName;
             case 'D':
@@ -474,9 +1000,9 @@ class Hijri extends Carbon
             case 'M':
                 return $this->monthName;
             case 't':
-                return (string) $converter->daysInMonth($year, $month);
+                return (string) HijriCalendar::daysInMonth($year, $month);
             case 'L':
-                return $converter->daysInYear($year) === 355 ? '1' : '0';
+                return HijriCalendar::isLeapYear($year) ? '1' : '0';
             case 'Y':
                 return sprintf('%04d', $year);
             case 'y':
