@@ -63,7 +63,25 @@ echo ' / ';
 echo $hijri->isoFormat('D MMMM YYYY');                       // "1 Ramadan 1445"
 ```
 
-### 5. Dual-Calendar Date Helper
+### 5. Monthly Renewals on the Hijri Calendar
+
+Renew a subscription on the same Hijri day each month. `addMonthsNoOverflow()` stops at the 29th when the next month is shorter, and `toGregorian()` gives the date to store:
+
+```php title="src/Renewals.php"
+use Carbon\Carbon;
+
+$start = Carbon::parse('2024-03-11')->toHijri(); // 1 Ramadan 1445
+
+$renewals = [];
+
+for ($month = 1; $month <= 3; $month++) {
+    $renewals[] = $start->copy()->addMonthsNoOverflow($month)->toGregorian()->toDateString();
+}
+
+// ["2024-04-10", "2024-05-09", "2024-06-08"]
+```
+
+### 6. Dual-Calendar Date Helper
 
 A small helper class that formats a stored Gregorian timestamp in both calendars, used from a plain PHP template. The Gregorian side is numeric on purpose (see [Troubleshooting](#troubleshooting)):
 

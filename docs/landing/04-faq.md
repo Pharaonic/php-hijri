@@ -26,6 +26,10 @@ Yes. {package.name} is open source under the {package.license} license, so you c
 
 It uses the tabular (arithmetic) Islamic calendar, the same 30-year cycle used by most software. Real-world dates can differ by a day or two from local moon sighting, so the package lets you shift results with a day adjustment.
 
+## Can I do date math in the Hijri calendar?
+
+Yes. A `Hijri` instance holds the real date, so it compares with any other date, and `addMonths()`, `addYears()`, `startOfMonth()`, `endOfYear()` and `diffInMonths()` follow Hijri month lengths. Call `toGregorian()` to get the Gregorian date back.
+
 ## How do I show month names in Arabic?
 
 Set an Arabic locale, either globally with `Carbon::setLocale('ar')` or per date with `->locale('ar')`. Any `ar` locale uses the Arabic month names; every other locale uses the English transliteration.
