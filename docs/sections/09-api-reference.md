@@ -20,6 +20,7 @@ Added to `Carbon\Carbon` by `Carbon::mixin(HijriCarbon::class)`, and available o
 | --- | --- | --- |
 | `Hijri::parse($time = null, $tz = null)` | Convert any Carbon-supported input to Hijri, using the global adjustment. | `Hijri` |
 | `Hijri::fromGregorian($time = null, $tz = null, ?int $adjustment = null)` | Same as `parse()`, with a per-call adjustment. | `Hijri` |
+| `toGregorian()` | The Gregorian date the instance was converted from, with its time, timezone and adjustment. See [Hijri to Gregorian](#hijri-to-gregorian). | `Carbon` |
 | `Hijri::getInstance()` | The shared instance used to read and set the global adjustment. | `Hijri` |
 | `locale(?string $locale = null, ...$fallbackLocales)` | Set the locale and switch month names between Arabic and English. Returns the locale when called with no argument. | `Hijri` \| `string` |
 | `format($format)` | Carbon's `format()` with Hijri date values and localized Hijri month and day names. See [Formatting & Locales](#formatting). | `string` |
@@ -56,4 +57,4 @@ All methods are static on `Pharaonic\Hijri\Calendar\HijriCalendar`.
 
 | Class | Thrown by | When |
 | --- | --- | --- |
-| `Pharaonic\Hijri\Exception\InvalidHijriDateException` | `fromHijri()`, `parseHijri()` | The Hijri date doesn't exist, or the string isn't `YYYY-MM-DD[ HH:MM[:SS]]`. |
+| `Pharaonic\Hijri\Exception\InvalidHijriDateException` | `fromHijri()`, `parseHijri()`, `toGregorian()` of a changed instance | The Hijri date doesn't exist, or the string isn't `YYYY-MM-DD[ HH:MM[:SS]]`. |
