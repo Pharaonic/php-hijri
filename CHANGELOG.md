@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 8.5.3 - Unreleased
+
+### Fixed
+- Converting a date to Hijri no longer changes the month names of other Carbon dates. Before, after the first conversion in a process, every Gregorian date printed with month names (`F`, `MMMM`, `monthName`) showed Hijri names, e.g. `11 Rabi' Al-Awwal 2024` instead of `11 March 2024`, and each conversion got slower. `Hijri` now uses its own translator per locale, built from Carbon's translations for that locale.
+- The 29th of Safar is no longer turned into the 1st of Rabi' Al-Awwal. Before, `2020-10-16` (adjustment `0`) converted to `1442-03-01` instead of `1442-02-29`. `year`, `month`, `day`, `format()` and `isoFormat()` now return the converted Hijri date for every day. In `format()`, `t`, `z` and `L` now give the Hijri month length, day of year and leap year.
+- `dayOfWeek`, `dayOfWeekIso` and weekday checks (`isTuesday()`, `isWeekend()`...) now follow the original date, like `dayName` already did. Before, `Carbon::parse('2025-10-07')->toHijri(0)->isTuesday()` returned `false`.
+
 ## 8.5.2 - 2026-10-06
 
 ### Added
