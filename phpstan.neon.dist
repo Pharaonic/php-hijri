@@ -1,5 +1,6 @@
 includes:
     - vendor/nesbot/carbon/extension.neon
+    - tests/phpstan-carbon.php
 
 parameters:
     level: 6
