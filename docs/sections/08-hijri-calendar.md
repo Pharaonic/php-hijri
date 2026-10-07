@@ -20,7 +20,7 @@ HijriCalendar::isValidDate(1445, 13, 1); // false
 
 - Odd months (Muharram, Rabi' Al-Awwal, …) have 30 days; even months have 29.
 - Dhu Al-Hijjah (month 12) has 30 days in a leap year and 29 otherwise.
-- A year is a leap year when `(11 × year + 14) mod 30 < 11`, giving 11 leap years in every 30-year cycle.
+- A year is a leap year when `(11 × year + 15) mod 30 < 11`: years 2, 5, 7, 10, 13, 15, 18, 21, 24, 26 and 29 of every 30-year cycle. These are the same leap years `toHijri()` uses, so `fromHijri()` converts every date back to the day it came from.
 - Years start at 1; year `0` and negative years are invalid.
 
 :::info Observed vs Tabular
