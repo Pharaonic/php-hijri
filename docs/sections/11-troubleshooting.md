@@ -36,12 +36,28 @@ Don't store a `Hijri` instance's `format('Y-m-d')` in a `DATE` column. Store the
 
 ### Gregorian dates show Hijri month names
 
-**Cause:** `Hijri` sets its month names on Carbon's shared translator. After the first conversion in a process, ordinary Gregorian dates that print month names (`F`, `M`, `MMMM`, `monthName`) show Hijri names too, e.g. `"Rabi' Al-Awwal"` instead of `"March"`.
+**Cause:** releases before this patch set the Hijri month names on Carbon's shared translator. After the first conversion in a process, ordinary Gregorian dates that print month names (`F`, `M`, `MMMM`, `monthName`) showed Hijri names too, e.g. `"Rabi' Al-Awwal"` instead of `"March"`.
 
-**Fix:** until this is fixed in the package, print Gregorian dates with numeric formats (`d/m/Y`, `toDateString()`) in requests that also convert to Hijri.
+**Fix:** update to the latest patch release with `composer update pharaonic/php-hijri`. `Hijri` now uses its own translator, and Gregorian dates keep their month names.
 
 ### InvalidHijriDateException when parsing
 
 **Cause:** `parseHijri()` accepts only `YYYY-MM-DD` with an optional `HH:MM` or `HH:MM:SS` time, and `fromHijri()` rejects days that don't exist (for example 30 Safar).
 
 **Fix:** normalize the input to `YYYY-MM-DD` first, and check the parts with `HijriCalendar::isValidDate()`.
+
+### Limitations
+
+A `Hijri` instance is meant for display. Its `year`, `month`, `day`, weekday, `format()` and `isoFormat()` give Hijri values, but everything else works on an internal representation and isn't supported:
+
+- date arithmetic (`addDays()`, `addMonths()`, `startOfMonth()`...),
+- comparisons (`eq()`, `lt()`, `between()`...) and `diff*()` / `diffForHumans()`,
+- `timestamp`, and JSON or array serialization.
+
+Do the arithmetic on the Gregorian `Carbon` date, then call `toHijri()` on the result:
+
+```php
+Carbon::parse('2024-03-11')->addDays(10)->toHijri(); // 11 Ramadan 1445
+```
+
+Once a `Hijri` instance has been changed (by `addDays()`, `setDate()`, `setTimezone()`...), its `year`, `month`, `day` and weekday are no longer the Hijri ones.
