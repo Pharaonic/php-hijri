@@ -31,7 +31,7 @@ Both methods are also available statically on the `Hijri` class without the mixi
 
 ### From a Hijri Instance
 
-`toGregorian()` turns a `Hijri` instance back into a Gregorian `Carbon\Carbon`. It returns the exact date, time and timezone the instance was converted from, and remembers the adjustment used for that conversion:
+`toGregorian()` turns a `Hijri` instance back into a Gregorian `Carbon\Carbon` with the same date, time and timezone. The instance keeps the adjustment it was converted with, so the result is the original date:
 
 ```php title="index.php"
 use Pharaonic\Hijri\Hijri;
@@ -42,9 +42,7 @@ $hijri->format('Y-m-d');                        // "1445-09-03"
 $hijri->toGregorian()->format('Y-m-d H:i e');  // "2024-03-11 20:15 Asia/Riyadh"
 ```
 
-Prefer it over `Hijri::fromHijri($hijri->year, $hijri->month, $hijri->day)`, which uses the global adjustment and drops the time.
-
-If the instance was changed after the conversion (`addDay()`, `setTime()`...), its current year, month and day are converted as a Hijri date with the same adjustment, and its time and timezone are kept. That throws `InvalidHijriDateException` if the changed date doesn't exist in the Hijri calendar.
+This also works after date math on the instance (`addMonth()`, `startOfYear()`...). Prefer it over `Hijri::fromHijri($hijri->year, $hijri->month, $hijri->day)`, which uses the global adjustment and drops the time.
 
 ### Invalid Input
 
