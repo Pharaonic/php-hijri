@@ -1,6 +1,6 @@
 ## Formatting & Locales
 
-`Hijri` overrides Carbon's month translations, so `format()`, `isoFormat()` and `monthName` print Hijri month names instead of Gregorian ones.
+`Hijri` formats with its own copy of Carbon's translations for each locale, with Hijri month names in place of the Gregorian ones. `format()`, `isoFormat()` and `monthName` print Hijri month names, while regular Carbon dates in the same app keep their Gregorian names.
 
 ### Month Names
 
@@ -49,13 +49,29 @@ Carbon::parse('2024-03-11')->toHijri()->isoFormat('LL'); // "1 رَمضان 1445
 
 ### `format()` vs `isoFormat()`
 
-Both are supported. `format()` replaces English day and month names in the output with the localized Hijri ones, so `l`, `D`, `F` and `M` work as expected:
+Both are supported. In `format()`, the date characters print Hijri values, and `l`, `D`, `F` and `M` print the localized weekday and Hijri month names:
 
 ```php
 $hijri->format('l, j F Y'); // "Monday, 1 Ramadan 1445"
 $hijri->format('D, M j');   // "Mon, Ramadan 1"
 ```
 
+| Character | Prints |
+| --- | --- |
+| `d`, `j` | Hijri day, with and without a leading zero |
+| `m`, `n` | Hijri month, with and without a leading zero |
+| `Y`, `y` | Hijri year, four and two digits |
+| `F`, `M` | Localized Hijri month name (both print the full name) |
+| `l`, `D` | Localized weekday name, full and short |
+| `w`, `N` | Weekday number of the original date (`0`–`6` from Sunday, `1`–`7` from Monday) |
+| `t` | Number of days in the Hijri month (29 or 30) |
+| `z` | Day of the Hijri year, starting from `0` |
+| `L` | `1` if the Hijri year has 355 days, `0` otherwise |
+| `S` | English ordinal suffix of the Hijri day (`st`, `nd`, `rd`, `th`) |
+| `c`, `r` | ISO 8601 and RFC 2822 dates built from the Hijri values |
+
+Time and timezone characters (`H`, `i`, `s`, `A`, `e`, `P`...) are unchanged. Escape a character with a backslash to print it as is: `format('\Y Y')` prints `"Y 1445"`.
+
 :::info Tip
-Prefer `isoFormat()` for non-English output. It reads names straight from the translator, while `format()` relies on replacing the English names after formatting.
+Prefer `isoFormat()` for non-English output. It reads every name and pattern (`LL`, `LLLL`) from the locale's translations.
 :::

@@ -22,7 +22,7 @@ Added to `Carbon\Carbon` by `Carbon::mixin(HijriCarbon::class)`, and available o
 | `Hijri::fromGregorian($time = null, $tz = null, ?int $adjustment = null)` | Same as `parse()`, with a per-call adjustment. | `Hijri` |
 | `Hijri::getInstance()` | The shared instance used to read and set the global adjustment. | `Hijri` |
 | `locale(?string $locale = null, ...$fallbackLocales)` | Set the locale and switch month names between Arabic and English. Returns the locale when called with no argument. | `Hijri` \| `string` |
-| `format($format)` | Carbon's `format()` with localized Hijri month and day names. | `string` |
+| `format($format)` | Carbon's `format()` with Hijri date values and localized Hijri month and day names. See [Formatting & Locales](#formatting). | `string` |
 | `getTranslatedDayName($context = null, $keySuffix = '', $defaultValue = null)` | Localized weekday name of the original date. | `string` |
 
 ### Hijri Properties
@@ -36,7 +36,11 @@ The usual Carbon properties, read with Hijri values:
 | `day` | Hijri day of month | `1` |
 | `monthName` | Localized Hijri month name | `"Ramadan"` |
 | `dayName` | Localized weekday name | `"Monday"` |
+| `dayOfWeek` | Weekday of the original date, `0` (Sunday) to `6` (Saturday) | `1` |
+| `dayOfWeekIso` | Weekday of the original date, `1` (Monday) to `7` (Sunday) | `1` |
 | `hour`, `minute`, `second` | Unchanged from the source date | `9` |
+
+Weekday checks such as `isMonday()`, `isWeekday()` and `isWeekend()` follow the original date too.
 
 ### HijriCalendar
 
