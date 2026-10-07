@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 8.0.5 - Unreleased
+## 8.0.5 - 2026-10-07
 
 ### Added
 - `Hijri::toGregorian()` returns the Gregorian date of a `Hijri` instance as a `Carbon\Carbon`. For an unchanged instance it's the exact date, time and timezone it was converted from, so a per-call adjustment is kept: `Hijri::fromGregorian('2024-03-11', null, 1)->toGregorian()` returns `2024-03-11`, while `Hijri::fromHijri($h->year, $h->month, $h->day)` used the global adjustment and returned `2024-03-13`. An instance changed after the conversion (`addDay()`, `setTime()`...) has its current year, month and day converted as a Hijri date with the same adjustment, keeping its time and timezone.
