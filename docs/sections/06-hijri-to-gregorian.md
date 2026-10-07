@@ -29,6 +29,23 @@ Carbon::parseHijri('1445-12-10', 'Asia/Riyadh')->format('Y-m-d e');
 
 Both methods are also available statically on the `Hijri` class without the mixin: `Hijri::fromHijri(...)` and `Hijri::parseHijri(...)`. They still return `Carbon\Carbon`.
 
+### From a Hijri Instance
+
+`toGregorian()` turns a `Hijri` instance back into a Gregorian `Carbon\Carbon`. It returns the exact date, time and timezone the instance was converted from, and remembers the adjustment used for that conversion:
+
+```php title="index.php"
+use Pharaonic\Hijri\Hijri;
+
+$hijri = Hijri::fromGregorian('2024-03-11 20:15', 'Asia/Riyadh', 1);
+
+$hijri->format('Y-m-d');                        // "1445-09-03"
+$hijri->toGregorian()->format('Y-m-d H:i e');  // "2024-03-11 20:15 Asia/Riyadh"
+```
+
+Prefer it over `Hijri::fromHijri($hijri->year, $hijri->month, $hijri->day)`, which uses the global adjustment and drops the time.
+
+If the instance was changed after the conversion (`addDay()`, `setTime()`...), its current year, month and day are converted as a Hijri date with the same adjustment, and its time and timezone are kept. That throws `InvalidHijriDateException` if the changed date doesn't exist in the Hijri calendar.
+
 ### Invalid Input
 
 Both methods throw `Pharaonic\Hijri\Exception\InvalidHijriDateException` (an `InvalidArgumentException`) when the input can't be a Hijri date:
