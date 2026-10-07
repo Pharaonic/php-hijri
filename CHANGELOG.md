@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 8.5.4 - Unreleased
+## 8.5.4 - 2026-10-07
 
 ### Fixed
 - `fromHijri()` and `parseHijri()` now return the right Gregorian date in every Hijri year. Before, they used different leap years than `toHijri()`: dates in years such as 1426 and 1456 came out one day early (`Carbon::fromHijri(1426, 1, 1, null, 0)` returned `2005-02-09` instead of `2005-02-10`), and 30 Dhu Al-Hijjah 1425 was rejected although `toHijri()` returns it. `HijriCalendar::isLeapYear()`, `daysInMonth()` and `isValidDate()` now use the same leap years as `toHijri()`: 2, 5, 7, 10, 13, 15, 18, 21, 24, 26 and 29 of each 30-year cycle (15 instead of 16). `toHijri()` results don't change.
