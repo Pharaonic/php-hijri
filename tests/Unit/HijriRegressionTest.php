@@ -7,6 +7,7 @@ use Carbon\AbstractTranslator;
 use DateInterval;
 use DateTimeImmutable;
 use Pharaonic\Hijri\Converter\GregorianToHijriConverter;
+use Pharaonic\Hijri\Exception\InvalidHijriDateException;
 use Pharaonic\Hijri\Hijri;
 use Pharaonic\Hijri\HijriCarbon;
 use PHPUnit\Framework\TestCase;
@@ -245,6 +246,99 @@ final class HijriRegressionTest extends TestCase
         self::assertSame(7, $sunday->dayOfWeekIso);
         self::assertTrue($sunday->isSunday());
         self::assertTrue($sunday->isWeekend());
+    }
+
+    public function testToGregorianReturnsTheOriginalDate(): void
+    {
+        $original = Carbon::parse('2024-03-11 20:15:30.123456', 'Asia/Riyadh');
+        $gregorian = $original->toHijri()->toGregorian();
+
+        self::assertSame(Carbon::class, get_class($gregorian));
+        self::assertSame('2024-03-11 20:15:30.123456 Asia/Riyadh', $gregorian->format('Y-m-d H:i:s.u e'));
+        self::assertTrue($gregorian->eq($original));
+    }
+
+    public function testToGregorianUsesTheAdjustmentOfTheConversion(): void
+    {
+        $date = Hijri::fromGregorian('2024-03-11', null, 1);
+
+        self::assertSame('1445-09-03', $date->format('Y-m-d'));
+        self::assertSame('2024-03-11', $date->toGregorian()->format('Y-m-d'));
+        self::assertSame('2024-03-11', Carbon::parse('2024-03-11')->toHijri(-2)->toGregorian()->format('Y-m-d'));
+    }
+
+    public function testToGregorianKeepsTheMicrosecondsBeforeTheEpoch(): void
+    {
+        $date = Carbon::parse('1960-05-01 12:00:00.250000', 'UTC')->toHijri();
+
+        self::assertSame('1960-05-01 12:00:00.250000', $date->toGregorian()->format('Y-m-d H:i:s.u'));
+    }
+
+    public function testToGregorianOfTheTwentyNinthOfSafar(): void
+    {
+        $date = Hijri::fromGregorian('2023-09-15');
+
+        self::assertSame('1445-02-29', $date->format('Y-m-d'));
+        self::assertSame('2023-09-15', $date->toGregorian()->format('Y-m-d'));
+    }
+
+    public function testToGregorianReturnsANewInstanceEachTime(): void
+    {
+        $date = Hijri::fromGregorian('2024-03-11');
+
+        $date->toGregorian()->addYear();
+
+        self::assertSame('2024-03-11', $date->toGregorian()->format('Y-m-d'));
+        self::assertSame('1445-09-01', $date->format('Y-m-d'));
+    }
+
+    public function testToGregorianOfAChangedInstance(): void
+    {
+        $date = Hijri::fromGregorian('2024-03-11 08:00', 'Africa/Cairo', 1)->addDay()->setTime(21, 45);
+
+        self::assertSame('1445-09-04', $date->format('Y-m-d'));
+        self::assertSame(
+            '2024-03-12 21:45:00 Africa/Cairo',
+            $date->toGregorian()->format('Y-m-d H:i:s e')
+        );
+    }
+
+    public function testToGregorianOfAChangedInstanceThatIsNotAHijriDate(): void
+    {
+        // Sha'aban 1445 has 29 days.
+        $date = Hijri::fromGregorian('2024-02-11')->setDay(30);
+
+        $this->expectException(InvalidHijriDateException::class);
+        $this->expectExceptionMessage('Invalid Hijri date: 1445-08-30.');
+
+        $date->toGregorian();
+    }
+
+    public function testToGregorianOfAnInstanceThatWasNeverConverted(): void
+    {
+        $date = Hijri::create(2024, 3, 11, 10, 30, 0, 'UTC');
+
+        self::assertSame('2024-03-11 10:30:00 UTC', $date->toGregorian()->format('Y-m-d H:i:s e'));
+    }
+
+    public function testToGregorianRoundTripsEveryDay(): void
+    {
+        $oneDay = new DateInterval('P1D');
+
+        foreach ([-2, -1, 0, 1, 2] as $adjustment) {
+            $day = new DateTimeImmutable('2019-01-01 13:00:00');
+            $end = new DateTimeImmutable('2026-12-31');
+
+            while ($day <= $end) {
+                self::assertSame(
+                    $day->format('Y-m-d H:i:s'),
+                    Hijri::fromGregorian($day, null, $adjustment)->toGregorian()->format('Y-m-d H:i:s'),
+                    sprintf('%s with adjustment %d', $day->format('Y-m-d'), $adjustment)
+                );
+
+                $day = $day->add($oneDay);
+            }
+        }
     }
 
     /**
