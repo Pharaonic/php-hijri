@@ -8,6 +8,7 @@ use Carbon\CarbonInterface;
 use DateTimeInterface;
 use DateTimeZone;
 use Pharaonic\Hijri\Converter\GregorianToHijriConverter;
+use Pharaonic\Hijri\Exception\InvalidHijriDateException;
 use Pharaonic\Hijri\Support\HijriAdjustment;
 
 class Hijri extends Carbon
@@ -88,6 +89,21 @@ class Hijri extends Carbon
     protected $hijriConvertedAt = null;
 
     /**
+     * The Gregorian instant the instance was converted from, as a Unix
+     * timestamp with microseconds ("U.u").
+     *
+     * @var string|null
+     */
+    protected $gregorianInstant = null;
+
+    /**
+     * The adjustment used for the conversion, in days.
+     *
+     * @var int|null
+     */
+    protected $hijriAdjustment = null;
+
+    /**
      * Get the shared Hijri entry-point used by the legacy API.
      */
     public static function getInstance(): Hijri
@@ -116,6 +132,9 @@ class Hijri extends Carbon
      */
     private function convertToHijri(int $adjustment): static
     {
+        $this->gregorianInstant = sprintf('%d.%06d', $this->getTimestamp(), $this->micro);
+        $this->hijriAdjustment = $adjustment;
+
         $components = (new GregorianToHijriConverter())->convert(
             $this,
             $adjustment
@@ -137,6 +156,49 @@ class Hijri extends Carbon
         $this->hijriConvertedAt = $this->getHijriState();
 
         return $this;
+    }
+
+    /**
+     * Get the Gregorian date of the instance.
+     *
+     * While the instance is unchanged since its conversion, this is the exact
+     * date and time it was converted from, in its timezone. Once it's changed,
+     * its current year, month and day are converted as a Hijri date, using
+     * the adjustment of the original conversion, and its time and timezone
+     * are kept. An instance that was never converted (Hijri::now(),
+     * Hijri::create()...) already holds a Gregorian date and is returned as is.
+     *
+     * @throws InvalidHijriDateException if the changed date isn't a valid Hijri date
+     */
+    public function toGregorian(): Carbon
+    {
+        if ($this->hijriConvertedAt === null) {
+            return $this->toGregorianCarbon(sprintf('%d.%06d', $this->getTimestamp(), $this->micro));
+        }
+
+        if ($this->isUnchangedHijri()) {
+            return $this->toGregorianCarbon((string) $this->gregorianInstant);
+        }
+
+        return static::fromHijri(
+            (int) $this->year,
+            (int) $this->month,
+            (int) $this->day,
+            $this->getTimezone(),
+            $this->hijriAdjustment
+        )->setTime($this->hour, $this->minute, $this->second, $this->micro);
+    }
+
+    /**
+     * Build a Carbon instance from a "U.u" instant, in the timezone of the
+     * instance.
+     */
+    private function toGregorianCarbon(string $instant): Carbon
+    {
+        /** @var Carbon $gregorian */
+        $gregorian = Carbon::createFromFormat('U.u', $instant);
+
+        return $gregorian->setTimezone($this->getTimezone());
     }
 
     /**
