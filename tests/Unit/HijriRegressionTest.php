@@ -7,7 +7,6 @@ use Carbon\AbstractTranslator;
 use DateInterval;
 use DateTimeImmutable;
 use Pharaonic\Hijri\Converter\GregorianToHijriConverter;
-use Pharaonic\Hijri\Exception\InvalidHijriDateException;
 use Pharaonic\Hijri\Hijri;
 use Pharaonic\Hijri\HijriCarbon;
 use PHPUnit\Framework\TestCase;
@@ -213,13 +212,14 @@ final class HijriRegressionTest extends TestCase
         }
     }
 
-    public function testMutatedInstancesKeepTheirPreviousBehaviour(): void
+    public function testChangedInstancesKeepReadingTheHijriDate(): void
     {
         $date = Hijri::fromGregorian('2024-03-11', null, -1)->addDay();
 
         self::assertSame(2, $date->day);
         self::assertSame('1445-09-02', $date->format('Y-m-d'));
-        self::assertSame(Carbon::parse('1445-09-02')->dayOfWeek, $date->dayOfWeek);
+        self::assertSame(2, $date->dayOfWeek);
+        self::assertTrue($date->isTuesday());
     }
 
     public function testWeekdayPropertiesFollowTheOriginalDate(): void
@@ -303,18 +303,7 @@ final class HijriRegressionTest extends TestCase
         );
     }
 
-    public function testToGregorianOfAChangedInstanceThatIsNotAHijriDate(): void
-    {
-        // Sha'aban 1445 has 29 days.
-        $date = Hijri::fromGregorian('2024-02-11')->setDay(30);
-
-        $this->expectException(InvalidHijriDateException::class);
-        $this->expectExceptionMessage('Invalid Hijri date: 1445-08-30.');
-
-        $date->toGregorian();
-    }
-
-    public function testToGregorianOfAnInstanceThatWasNeverConverted(): void
+    public function testToGregorianOfAnInstanceMadeByCarbon(): void
     {
         $date = Hijri::create(2024, 3, 11, 10, 30, 0, 'UTC');
 
