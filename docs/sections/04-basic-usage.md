@@ -22,6 +22,15 @@ $hijri->monthName; // "Ramadan"
 $hijri->dayName;   // "Monday"
 ```
 
+Date math follows the Hijri calendar, and the instance still compares with any other date:
+
+```php
+$hijri->copy()->addMonth()->format('Y-m-d');       // "1445-10-01"
+$hijri->copy()->endOfMonth()->format('Y-m-d');     // "1445-09-30"
+$hijri->diffInDays(Carbon::parse('2024-03-21 09:30')); // 10
+$hijri->toGregorian()->toDateTimeString();         // "2024-03-11 09:30:00"
+```
+
 Go the other way with `fromHijri()`, which returns a regular Gregorian `Carbon` instance:
 
 ```php
