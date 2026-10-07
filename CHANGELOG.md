@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 8.0.6 - Unreleased
+
+### Fixed
+- Date math on a `Hijri` instance follows the Hijri calendar. Before, it used Gregorian month lengths on the Hijri numbers: from 29 Safar 1445 (`2023-09-15`), `addDay()` gave 2 Rabi' Al-Awwal instead of 1, and `addMonth()` gave 1 Rabi' Al-Akher instead of 29 Rabi' Al-Awwal. Now days and smaller units move the real date, and months, quarters, years, decades and centuries are Hijri ones (`addMonths()`, `subYears()`, `add()`, `sub()`, `CarbonInterval`, `DateInterval`, `CarbonPeriod`), with Carbon's month overflow settings. `setDate()`, `setDateTime()`, `year()`, `month()`, `day()` and the `year`, `month` and `day` properties set Hijri values. `startOf`/`endOf` month, quarter, year, decade, century and millennium, `firstOfMonth()`, `lastOfMonth()` and `nthOfMonth()` (and their quarter and year versions) use Hijri boundaries. `daysInMonth`, `dayOfYear`, `daysInYear`, `isLeapYear()`, `quarter`, `diffInMonths()`, `diffInYears()`, `age`, `isSameMonth()`, `isSameYear()`, `isSameQuarter()` and `isBirthday()` are Hijri ones.
+- Comparing a `Hijri` instance with other dates is right. The instance used to store the Hijri date as a Gregorian one (year 1445 AD), so `getTimestamp()`, `eq()`, `lt()`, `between()`, `isPast()`, `diffInDays()` and `diffForHumans()` were about 579 years off: `Hijri::fromGregorian('2024-03-11')->diffInDays(Carbon::parse('2024-03-11'))` returned `211302`. It now holds the real date and time, and reads it in the Hijri calendar with the adjustment it was converted with.
+- `Hijri::now()`, `Hijri::create()`, `Hijri::createFromFormat()` and other Carbon factories return Hijri dates with Hijri month names. They take Gregorian input, like `Hijri::parse()`.
+- `Hijri::fromGregorian()` and `toHijri()` keep the exact moment of a `DateTimeInterface`, and a `Hijri` instance passed to them is no longer converted twice.
+- `serialize()` keeps the date, timezone and adjustment of a `Hijri` instance.
+
+### Changed
+- `getTimestamp()`, `rawFormat()`, `toISOString()`, `toJSON()`, `json_encode()` and the ATOM, RFC and W3C strings give the Gregorian date. `format()`, `isoFormat()`, `toDateString()`, `toDateTimeString()`, `toFormattedDateString()`, `toDayDateTimeString()`, `toArray()` and `(string)` still print the Hijri date. Pass `toGregorian()` to code that reads the date with `format()`.
+- `toGregorian()` returns the date of the instance, also after date math. It no longer converts the changed values as a Hijri date, and no longer throws `InvalidHijriDateException`. `toImmutable()` returns the Gregorian date as a `CarbonImmutable`.
+- Removed internal members of `Hijri`: the `$CURRENT_DAY`, `$hijriYear`, `$hijriMonth`, `$hijriDay`, `$hijriConvertedAt` and `$gregorianInstant` properties, `isUnchangedHijri()`, and the `getTranslatedDayName()` override.
+
 ## 8.0.5 - 2026-10-07
 
 ### Added
