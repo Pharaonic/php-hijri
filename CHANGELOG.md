@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 8.3.3 - Unreleased
+## 8.3.3 - 2026-10-07
 
 ### Fixed
 - Converting a date to Hijri no longer changes the month names of other Carbon dates. Before, after the first conversion in a process, every Gregorian date printed with month names (`F`, `MMMM`, `monthName`) showed Hijri names, e.g. `11 Rabi' Al-Awwal 2024` instead of `11 March 2024`, and each conversion got slower. `Hijri` now uses its own translator per locale, built from Carbon's translations for that locale.
