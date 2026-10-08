@@ -63,14 +63,24 @@ $hijri->format('D, M j');   // "Mon, Ramadan 1"
 | `Y`, `y` | Hijri year, four and two digits |
 | `F`, `M` | Localized Hijri month name (both print the full name) |
 | `l`, `D` | Localized weekday name, full and short |
-| `w`, `N` | Weekday number of the original date (`0`–`6` from Sunday, `1`–`7` from Monday) |
+| `w`, `N` | Weekday number (`0`–`6` from Sunday, `1`–`7` from Monday) |
 | `t` | Number of days in the Hijri month (29 or 30) |
 | `z` | Day of the Hijri year, starting from `0` |
 | `L` | `1` if the Hijri year has 355 days, `0` otherwise |
 | `S` | English ordinal suffix of the Hijri day (`st`, `nd`, `rd`, `th`) |
 | `c`, `r` | ISO 8601 and RFC 2822 dates built from the Hijri values |
 
-Time and timezone characters (`H`, `i`, `s`, `A`, `e`, `P`...) are unchanged. Escape a character with a backslash to print it as is: `format('\Y Y')` prints `"Y 1445"`.
+Time and timezone characters (`H`, `i`, `s`, `A`, `e`, `P`...), the timestamp (`U`) and ISO weeks (`W`, `o`) are unchanged. Escape a character with a backslash to print it as is: `format('\Y Y')` prints `"Y 1445"`.
+
+`rawFormat()` formats the Gregorian date. `toDateString()`, `toDateTimeString()`, `toFormattedDateString()` and `(string)` print the Hijri date, while `toISOString()`, `toJSON()` and `json_encode()` give the Gregorian ISO-8601 date, so APIs return a standard date:
+
+```php
+$hijri = Carbon::parse('2024-03-11 09:30', 'UTC')->toHijri();
+
+$hijri->toDateString();      // "1445-09-01"
+$hijri->rawFormat('Y-m-d');  // "2024-03-11"
+json_encode($hijri);         // "\"2024-03-11T09:30:00.000000Z\""
+```
 
 :::info Tip
 Prefer `isoFormat()` for non-English output. It reads every name and pattern (`LL`, `LLLL`) from the locale's translations.

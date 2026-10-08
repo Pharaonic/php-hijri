@@ -6,6 +6,7 @@
   - [Basic Usage](#basic-usage)
   - [Gregorian to Hijri](#gregorian-to-hijri)
   - [Hijri to Gregorian](#hijri-to-gregorian)
+  - [Date Math & Comparisons](#date-math)
   - [Formatting & Locales](#formatting)
   - [Hijri Calendar](#hijri-calendar)
 - API Reference
