@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 8.4.6 - Unreleased
+## 8.4.6 - 2026-10-08
 
 ### Fixed
 - Date math on a `Hijri` instance follows the Hijri calendar. Before, it used Gregorian month lengths on the Hijri numbers: from 29 Safar 1445 (`2023-09-15`), `addDay()` gave 2 Rabi' Al-Awwal instead of 1, and `addMonth()` gave 1 Rabi' Al-Akher instead of 29 Rabi' Al-Awwal. Now days and smaller units move the real date, and months, quarters, years, decades and centuries are Hijri ones (`addMonths()`, `subYears()`, `add()`, `sub()`, `CarbonInterval`, `DateInterval`, `CarbonPeriod`), with Carbon's month overflow settings. `setDate()`, `setDateTime()`, `year()`, `month()`, `day()` and the `year`, `month` and `day` properties set Hijri values. `startOf`/`endOf` month, quarter, year, decade, century and millennium, `firstOfMonth()`, `lastOfMonth()` and `nthOfMonth()` (and their quarter and year versions) use Hijri boundaries. `daysInMonth`, `dayOfYear`, `daysInYear`, `isLeapYear()`, `quarter`, `diffInMonths()`, `diffInYears()`, `age`, `isSameMonth()`, `isSameYear()`, `isSameQuarter()` and `isBirthday()` are Hijri ones.
