@@ -11,6 +11,9 @@ items:
   - icon: switch
     title: Hijri to Gregorian
     text: Build a Gregorian Carbon date from Hijri parts with `Carbon::fromHijri(1445, 9, 1)`.
+  - icon: calendar
+    title: Hijri Date Math
+    text: "`addMonths()`, `startOfMonth()` and `diffInMonths()` follow Hijri months, and comparisons work with any date."
   - icon: document
     title: Hijri String Parsing
     text: Parse `YYYY-MM-DD` Hijri strings with an optional time using `Carbon::parseHijri()`.
