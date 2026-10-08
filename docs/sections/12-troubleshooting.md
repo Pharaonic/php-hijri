@@ -24,11 +24,11 @@
 
 **Fix:** call `->locale('ar')` on the `Hijri` instance, or `Carbon::setLocale('ar')` before converting.
 
-### Date math gives strange results on a Hijri instance
+### Another library gets the Hijri date instead of the Gregorian one
 
-**Cause:** a `Hijri` instance is a Carbon object whose year, month and day hold Hijri numbers. Carbon still applies Gregorian rules to it, so `addDays()`, `diffInDays()`, `diffForHumans()` and comparisons don't follow the Hijri calendar, and calling `toHijri()` on it converts it a second time.
+**Cause:** `format()` (and `toDateString()`, `(string)`...) print the Hijri date. Code that reads a `DateTimeInterface` through `format('Y-m-d')`, such as a `datetime` column cast or `new DateTime($date->format(...))`, receives `"1445-09-01"`.
 
-**Fix:** do all math and comparisons on the Gregorian `Carbon` date, and call `toHijri()` only for display. To start from Hijri values, convert them with `Carbon::fromHijri()` first.
+**Fix:** pass `$hijri->toGregorian()` to that code. `toISOString()` and `json_encode()` already give the Gregorian date.
 
 :::warning
 Don't store a `Hijri` instance's `format('Y-m-d')` in a `DATE` column. Store the Gregorian date and convert when you display it.
@@ -46,18 +46,8 @@ Don't store a `Hijri` instance's `format('Y-m-d')` in a `DATE` column. Store the
 
 **Fix:** normalize the input to `YYYY-MM-DD` first, and check the parts with `HijriCalendar::isValidDate()`.
 
-### Limitations
+### `modify('+1 month')` moves a Gregorian month
 
-A `Hijri` instance is meant for display. Its `year`, `month`, `day`, weekday, `format()` and `isoFormat()` give Hijri values, but everything else works on an internal representation and isn't supported:
+**Cause:** `modify()` uses PHP's relative formats, which follow the Gregorian calendar.
 
-- date arithmetic (`addDays()`, `addMonths()`, `startOfMonth()`...),
-- comparisons (`eq()`, `lt()`, `between()`...) and `diff*()` / `diffForHumans()`,
-- `timestamp`, and JSON or array serialization.
-
-Do the arithmetic on the Gregorian `Carbon` date, then call `toHijri()` on the result:
-
-```php
-Carbon::parse('2024-03-11')->addDays(10)->toHijri(); // 11 Ramadan 1445
-```
-
-Once a `Hijri` instance has been changed (by `addDays()`, `setDate()`, `setTimezone()`...), its `year`, `month`, `day` and weekday are no longer the Hijri ones.
+**Fix:** use `addMonths()`, `addYears()`, `add()` or `sub()`, which follow Hijri months and years. See [Date Math & Comparisons](#date-math).
